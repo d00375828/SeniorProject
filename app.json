@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "shadow-app",
+    "slug": "shadow-sales",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
+    "scheme": "shadowapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "co.shadowsales.mobile",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"],
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to select a profile picture.",
+        "NSMicrophoneUsageDescription": "We need access to your microphone to record your sales pitches.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "package": "co.shadowsales.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-audio",
+      "expo-audio",
+      "expo-video",
+      "expo-font",
+      "expo-web-browser",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "privacyUrl": "https://d00375828.github.io/shadow-app-site/privacy",
+      "supportUrl": "https://d00375828.github.io/shadow-app-site/support",
+      "router": {},
+      "eas": {
+        "projectId": "02745274-3227-41ab-b5aa-cbeb15efa937"
+      }
+    },
+    "owner": "shadow-sales"
+  }
+}

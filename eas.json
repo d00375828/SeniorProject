@@ -1,0 +1,21 @@
+{
+    "cli": { "version": ">= 14.0.0", "appVersionSource": "remote" },
+    "build": {
+      "production": {
+        "distribution": "store",
+        "ios": { "resourceClass": "m-medium" }
+      }
+    },
+    "submit": {
+      "production": {
+        "ios": {
+          "ascAppId": "6755219370",
+          "appleId": "anr1506@icloud.com"
+        },
+        "android": {
+          "serviceAccountKeyPath": "./google-service-account.json"
+        }
+      }
+    }
+  }
+  
