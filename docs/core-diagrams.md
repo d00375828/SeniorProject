@@ -35,15 +35,15 @@ flowchart LR
     U[Rep User]
 
     subgraph APP[Shadow Mobile App]
-      UI[UI Layer\nLogin Home Recordings Insights Chat]
-      STATE[App State Layer\nAuth Profile Recordings Theme]
-      REC[Recorder Service\nMic Capture and File Handling]
-      CHAT[Chat Service\nMessage Client]
-      STORE[(Local Storage\nAsyncStorage)]
+      UI[UI Laye Login Home Recordings Insights Chat]
+      STATE[App State Layer Auth Profile Recordings Theme]
+      REC[Recorder Service Mic Capture and File Handling]
+      CHAT[Chat Service Message Client]
+      STORE[(Local Storage AsyncStorage)]
     end
 
-    GRADE[Grading API\nAudio Scoring and Transcript]
-    CHATAPI[Chat API\nCoaching Response]
+    GRADE[Grading API Audio Scoring and Transcript]
+    CHATAPI[Chat API Coaching Response]
 
     U --> UI
     UI --> STATE
@@ -116,10 +116,10 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     REP[Sales Rep]
-    APP[[Shadow Mobile App\nRep Experience]]
+    APP[[Shadow Mobile App Rep Experience]]
     MIC[Device Microphone]
-    FILES[Device Files\nDocument Picker]
-    STORAGE[(Local Device Storage\nAsyncStorage)]
+    FILES[Device Files Document Picker]
+    STORAGE[(Local Device Storage AsyncStorage)]
     GRADEAPI[Grading Backend API]
     CHATAPI[Chat Backend API]
 
