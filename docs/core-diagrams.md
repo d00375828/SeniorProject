@@ -1,4 +1,4 @@
-# Core System Diagrams (Rep App)
+# Core System Diagrams for OG architecture
 
 ## 1) Flow Diagram (Core User Flow)
 
@@ -28,14 +28,14 @@ flowchart TD
     N --> O
 ```
 
-## 2) Component Diagram (Core Runtime Components)
+## 2) Component Diagram
 
 ```mermaid
 flowchart LR
     U[Rep User]
 
     subgraph APP[Shadow Mobile App]
-      UI[UI Laye Login Home Recordings Insights Chat]
+      UI[UI Layer Login Home Recordings Insights Chat]
       STATE[App State Layer Auth Profile Recordings Theme]
       REC[Recorder Service Mic Capture and File Handling]
       CHAT[Chat Service Message Client]
@@ -56,7 +56,7 @@ flowchart LR
     CHATAPI --> CHAT
 ```
 
-## 3) Sequence Diagram (Same Components, Detailed Interaction)
+## 3) Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -111,7 +111,7 @@ sequenceDiagram
     end
 ```
 
-## 4) System Context Diagram (Rep Scope)
+## 4) System Context Diagram
 
 ```mermaid
 flowchart TB
