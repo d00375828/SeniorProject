@@ -38,12 +38,12 @@ flowchart TD
 flowchart LR
     U[Rep User]
 
-    subgraph APP[Shadow Mobile App]
-      UI[UI Layer Login Home Recordings Insights Chat]
-      STATE[App State Layer Auth Profile Recordings Theme]
-      REC[Recorder Service Mic Capture and File Handling]
-      CHAT[Chat Service Message Client]
-      STORE[(Local Storage AsyncStorage)]
+    subgraph APP[Shadow App]
+      UI[UI Layer - Login, Home, Recordings, Insights, Chat]
+      STATE[App State Layer - Auth, Profile, Recordings, Theme]
+      REC[Recorder Service, Mic Capture and File Handling]
+      CHAT[Chat Service, Message, Client]
+      STORE[(Local Storage, AsyncStorage)]
     end
 
     GRADE[Grading API Audio Scoring and Transcript]
@@ -120,7 +120,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     REP[Sales Rep]
-    APP[[Shadow Mobile App Rep Experience]]
+    APP[Shadow Mobile App Rep Experience]
     MIC[Device Microphone]
     FILES[Device Files Document Picker]
     STORAGE[(Local Device Storage AsyncStorage)]
