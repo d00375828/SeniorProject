@@ -4,36 +4,36 @@
 
 ```mermaid
 flowchart TD
-    A[Open app] --> D[Home]
+    A[Open app] --> B[Home]
 
-    D --> S[Choose scenario<br/>Interview | Presentation | Hard conversation]
-    S --> C[Set role + tone + goals]
-    C --> R[Start roleplay]
+    B --> C[Choose scenario]
+    C --> D[Configure roleplay]
+    D --> E[Start roleplay]
 
-    R --> T{Push to talk}
-    T --> U[Record speech chunk]
-    U --> V[Send audio to API]
-    V --> W{Success}
+    E --> F[Push to talk]
+    F --> G[Record speech]
+    G --> H[Send audio to API]
+    H --> I{Turn success}
 
-    W -- Yes --> X[Get transcript + AI reply + AI voice]
-    X --> Y[Play AI voice]
-    Y --> T
+    I -- Yes --> J[Receive transcript and AI reply]
+    J --> K[Play AI voice]
+    K --> F
 
-    W -- No --> Z[Error and retry]
-    Z --> T
+    I -- No --> L[Retry]
+    L --> F
 
-    R --> E[End session]
-    E --> F[Send full transcript to Summary API]
-    F --> G{Success}
+    E --> M[End session]
+    M --> N[Send transcript to Summary API]
+    N --> O{Summary success}
 
-    G -- Yes --> H[Show transcript + coaching]
-    G -- No --> I[Error and retry]
-    I --> F
+    O -- Yes --> P[Show transcript and coaching]
+    O -- No --> Q[Retry summary]
+    Q --> N
 
-    H --> J{Save locally}
-    J -- Yes --> K[Save on device]
-    J -- No --> L[Back to Home]
-    K --> L
+    P --> R{Save locally}
+    R -- Yes --> S[Save on device]
+    R -- No --> T[Back to home]
+    S --> T
 ```
 
 ## 2) Component Diagram
