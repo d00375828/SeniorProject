@@ -9,23 +9,28 @@ flowchart TD
     C -- Yes --> D[Go to Home]
     C -- No --> B
 
+    %% Two main paths from Home
     D --> E{Record new audio?}
-    E -- Yes --> F[Capture audio]
-    E -- No --> G[Upload existing audio]
+    D --> F{Open chat for coaching?}
 
-    F --> H[Send audio for grading]
-    G --> H
+    %% Recording path
+    E -- Yes --> G[Capture audio]
+    E -- No --> H[Upload existing audio]
+    G --> J[Send audio for grading]
+    H --> J
 
-    H --> I{Grading success?}
-    I -- Yes --> J[Save result to history]
-    I -- No --> K[Show error and retry]
-    K --> E
+    J --> K{Grading success?}
+    K -- Yes --> L[Save result to history]
+    K -- No --> M[Show error and retry]
+    M --> E
 
-    J --> L[View recording details and insights]
-    L --> M{Open chat for coaching?}
-    M -- Yes --> N[Send message and receive AI response]
-    M -- No --> O[End session]
-    N --> O
+    L --> N[View recording details and insights]
+    N --> O[End session]
+
+    %% Chat path
+    F -- Yes --> I[Send message and receive AI response]
+    F -- No --> O
+    I --> O
 ```
 
 ## 2) Component Diagram
