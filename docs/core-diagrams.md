@@ -29,7 +29,6 @@ flowchart TD
 
     %% Chat path
     F -- Yes --> I[Send message and receive AI response]
-    F -- No --> O
     I --> O
 ```
 
