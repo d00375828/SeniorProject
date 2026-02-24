@@ -3,39 +3,37 @@
 ## 1) Flow Diagram (Core User Flow)
 
 ```mermaid
+1) Fixed Flow Diagram (GitHub-safe)
 flowchart TD
-    A[Open app] --> D[Go to Home]
+    A[Open app] --> D[Home]
 
-    D --> S[Choose roleplay scenario(Interview / Presentation / Hard conversation)]
-    S --> C[Configure roleplay(role, tone, difficulty, goals)]
+    D --> S[Choose scenario<br/>Interview | Presentation | Hard conversation]
+    S --> C[Set role + tone + goals]
+    C --> R[Start roleplay]
 
-    C --> R[Start roleplay session]
+    R --> T{Push to talk}
+    T --> U[Record speech chunk]
+    U --> V[Send audio to API]
+    V --> W{Success}
 
-    %% Turn loop (push-to-talk)
-    R --> T{Push-to-talk?}
-    T -- Hold --> U[Capture speech chunk]
-    U --> V[Send audio turn to Roleplay API]
-    V --> W{Turn success?}
-
-    W -- Yes --> X[Receive: user transcript + AI text + AI voice]
-    X --> Y[Play AI voice response]
+    W -- Yes --> X[Get transcript + AI reply + AI voice]
+    X --> Y[Play AI voice]
     Y --> T
 
-    W -- No --> Z[Show error + retry]
+    W -- No --> Z[Error and retry]
     Z --> T
 
-    %% End session + coaching
     R --> E[End session]
-    E --> F[Send full session transcript/history to Summary API]
-    F --> G{Summary success?}
-    G -- Yes --> H[Show coaching summary Transcript + wins + improvement bullets + drills]
-    G -- No --> I[Show error + retry summary]
+    E --> F[Send full transcript to Summary API]
+    F --> G{Success}
+
+    G -- Yes --> H[Show transcript + coaching]
+    G -- No --> I[Error and retry]
     I --> F
 
-    %% Optional local save
-    H --> J{Save session locally?}
-    J -- Yes --> K[Save to device (SQLite or local storage)]
-    J -- No --> L[Return to Home]
+    H --> J{Save locally}
+    J -- Yes --> K[Save on device]
+    J -- No --> L[Back to Home]
     K --> L
 ```
 
@@ -45,50 +43,48 @@ flowchart TD
 flowchart LR
     U[User]
 
-    subgraph APP[Shadow Confidence Builder App (Mobile)]
-      UI[UI Layer Home, Scenario Setup, Roleplay Session, Summary]
-      STATE[App State Layer Session State, History (optional), Settings]
-      REC[Recorder Service Push-to-talk capture, chunk encoding]
-      PLAYER[Audio Playback Service Play AI voice, pause/stop]
-      ROLEPLAY[Roleplay Session Manager Turn loop, history buffer, retries]
-      API[API Client Upload audio turn, request summary]
-      LOCAL[(Local Persistence - Optional SQLite or AsyncStorage)]
+    subgraph APP[Mobile App]
+      UI[UI screens<br/>Home, Setup, Session, Summary]
+      STATE[Session state<br/>History and settings]
+      REC[Recorder<br/>Push to talk]
+      PLAYER[Player<br/>AI voice playback]
+      MGR[Session manager<br/>Turn loop and retries]
+      CLIENT[API client]
+      LOCAL[(Local save optional<br/>SQLite or storage)]
     end
 
-    subgraph BACKEND[Tiny Roleplay Backend API]
-      TURN[Turn Endpoint POST /roleplay/turn]
-      SUMMARY[Summary Endpoint POST /roleplay/end]
-      ORCH[Orchestrator STT → LLM → TTS]
+    subgraph BACKEND[Backend API]
+      TURN[POST roleplay turn]
+      SUM[POST end session]
+      ORCH[Orchestrator<br/>STT then LLM then TTS]
     end
 
-    subgraph AI[Gemini Services]
-      STT[Speech-to-Text]
-      LLM[Roleplay LLM Response]
-      TTS[Text-to-Speech]
+    subgraph AI[Gemini]
+      STT[Speech to text]
+      LLM[Roleplay response]
+      TTS[Text to speech]
     end
 
     U --> UI
-    UI --> STATE
     UI --> REC
     UI --> PLAYER
-    UI --> ROLEPLAY
+    UI --> MGR
+    MGR --> CLIENT
 
-    ROLEPLAY --> API
-    API --> TURN
-    API --> SUMMARY
+    CLIENT --> TURN
+    CLIENT --> SUM
 
     TURN --> ORCH
-    SUMMARY --> ORCH
+    SUM --> ORCH
 
     ORCH --> STT
     ORCH --> LLM
     ORCH --> TTS
 
     STATE <--> LOCAL
-    TURN --> API
-    SUMMARY --> API
-    API --> ROLEPLAY
-    PLAYER --> UI
+    TURN --> CLIENT
+    SUM --> CLIENT
+    CLIENT --> MGR
 ```
 
 ## 3) Sequence Diagram
