@@ -3,7 +3,6 @@
 ## 1) Flow Diagram (Core User Flow)
 
 ```mermaid
-1) Fixed Flow Diagram (GitHub-safe)
 flowchart TD
     A[Open app] --> D[Home]
 
