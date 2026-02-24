@@ -156,18 +156,16 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    USER[Individual User]
+    USER[User]
     APP[Shadow App]
-    MIC[Device Microphone]
-    SPK[Device Speaker / Audio Output]
-    LOCAL[(Local Device Storage / SQLite)]
-    ROLEAPI[Roleplay Backend API]
-    GEMINI[Gemini Services - STT + LLM + TTS]
+    OS[Device Audio and Permissions]
+    LOCAL[(Local Storage - SQLite )]
+    API[Roleplay Backend API]
+    GEMINI[Gemini Services - STT, LLM, TTS]
 
     USER --> APP
-    APP --> MIC
-    APP --> SPK
+    APP --> OS
     APP <--> LOCAL
-    APP --> ROLEAPI
-    ROLEAPI --> GEMINI
+    APP --> API
+    API --> GEMINI
 ```
