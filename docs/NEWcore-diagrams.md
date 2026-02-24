@@ -6,8 +6,8 @@
 flowchart TD
     A[Open app] --> D[Go to Home]
 
-    D --> S[Choose roleplay scenario<br/>(Interview / Presentation / Hard conversation)]
-    S --> C[Configure roleplay<br/>(role, tone, difficulty, goals)]
+    D --> S[Choose roleplay scenario(Interview / Presentation / Hard conversation)]
+    S --> C[Configure roleplay(role, tone, difficulty, goals)]
 
     C --> R[Start roleplay session]
 
@@ -28,7 +28,7 @@ flowchart TD
     R --> E[End session]
     E --> F[Send full session transcript/history to Summary API]
     F --> G{Summary success?}
-    G -- Yes --> H[Show coaching summary<br/>Transcript + wins + improvement bullets + drills]
+    G -- Yes --> H[Show coaching summary Transcript + wins + improvement bullets + drills]
     G -- No --> I[Show error + retry summary]
     I --> F
 
@@ -46,19 +46,19 @@ flowchart LR
     U[User]
 
     subgraph APP[Shadow Confidence Builder App (Mobile)]
-      UI[UI Layer<br/>Home, Scenario Setup, Roleplay Session, Summary]
-      STATE[App State Layer<br/>Session State, History (optional), Settings]
-      REC[Recorder Service<br/>Push-to-talk capture, chunk encoding]
-      PLAYER[Audio Playback Service<br/>Play AI voice, pause/stop]
-      ROLEPLAY[Roleplay Session Manager<br/>Turn loop, history buffer, retries]
-      API[API Client<br/>Upload audio turn, request summary]
-      LOCAL[(Local Persistence - Optional<br/>SQLite or AsyncStorage)]
+      UI[UI Layer Home, Scenario Setup, Roleplay Session, Summary]
+      STATE[App State Layer Session State, History (optional), Settings]
+      REC[Recorder Service Push-to-talk capture, chunk encoding]
+      PLAYER[Audio Playback Service Play AI voice, pause/stop]
+      ROLEPLAY[Roleplay Session Manager Turn loop, history buffer, retries]
+      API[API Client Upload audio turn, request summary]
+      LOCAL[(Local Persistence - Optional SQLite or AsyncStorage)]
     end
 
     subgraph BACKEND[Tiny Roleplay Backend API]
-      TURN[Turn Endpoint<br/>POST /roleplay/turn]
-      SUMMARY[Summary Endpoint<br/>POST /roleplay/end]
-      ORCH[Orchestrator<br/>STT → LLM → TTS]
+      TURN[Turn Endpoint POST /roleplay/turn]
+      SUMMARY[Summary Endpoint POST /roleplay/end]
+      ORCH[Orchestrator STT → LLM → TTS]
     end
 
     subgraph AI[Gemini Services]
@@ -162,12 +162,12 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     USER[Individual User]
-    APP[Shadow Mobile App<br/>Confidence Roleplay]
+    APP[Shadow Mobile App Confidence Roleplay]
     MIC[Device Microphone]
     SPK[Device Speaker / Audio Output]
-    LOCAL[(Local Device Storage<br/>Optional SQLite/AsyncStorage)]
+    LOCAL[(Local Device Storage Optional SQLite/AsyncStorage)]
     ROLEAPI[Roleplay Backend API]
-    GEMINI[Gemini Services<br/>STT + LLM + TTS]
+    GEMINI[Gemini Services - STT + LLM + TTS]
 
     USER --> APP
     APP --> MIC
