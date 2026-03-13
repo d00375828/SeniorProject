@@ -1,0 +1,227 @@
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, Animated, Pressable, ScrollView, Text, View } from "react-native";
+
+import AssistantPlayback from "@/components/AssistantPlayback";
+import AppButton from "@/components/AppButton";
+import BackButton from "@/components/BackButton";
+import Card from "@/components/Card";
+import MessageBubble from "@/components/MessageBubble";
+import PageHeader from "@/components/PageHeader";
+import Screen from "@/components/Screen";
+import { useSession, useTheme } from "@/context";
+import { useRecorder } from "@/hooks/useRecorder";
+
+export default function SessionScreen() {
+  const { colors } = useTheme();
+  const {
+    activeSession,
+    submitTurn,
+    retryLastTurn,
+    endSession,
+    setPlaybackState,
+  } = useSession();
+  const { isRecording, seconds, pulse, start, stop, reset } = useRecorder();
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [localBusy, setLocalBusy] = useState(false);
+
+  useEffect(() => {
+    if (!activeSession) {
+      router.replace("/");
+    }
+  }, [activeSession]);
+
+  const messages = useMemo(() => activeSession?.turns ?? [], [activeSession?.turns]);
+
+  if (!activeSession) {
+    return null;
+  }
+
+  const clock = `${Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
+
+  const isBusy =
+    localBusy ||
+    activeSession.status === "submitting" ||
+    activeSession.status === "ending";
+
+  async function onRecordPress() {
+    try {
+      if (isRecording) {
+        const uri = await stop();
+        if (!uri) {
+          Alert.alert("Recording error", "No audio was captured for this turn.");
+          return;
+        }
+        setPlaybackError(null);
+        setLocalBusy(true);
+        await submitTurn(uri);
+      } else {
+        await start();
+      }
+    } catch (error: any) {
+      Alert.alert("Turn failed", error?.message ?? "Unable to submit this turn.");
+    } finally {
+      setLocalBusy(false);
+    }
+  }
+
+  async function onRetry() {
+    try {
+      setPlaybackError(null);
+      setLocalBusy(true);
+      await retryLastTurn();
+    } catch (error: any) {
+      Alert.alert("Retry failed", error?.message ?? "Unable to retry the last turn.");
+    } finally {
+      setLocalBusy(false);
+    }
+  }
+
+  async function onEndSession() {
+    try {
+      setLocalBusy(true);
+      await endSession();
+      reset();
+      router.push("/summary" as any);
+    } catch (error: any) {
+      Alert.alert(
+        "Summary failed",
+        error?.message ?? "Unable to build the session summary."
+      );
+    } finally {
+      setLocalBusy(false);
+    }
+  }
+
+  return (
+    <Screen scroll={false} backgroundColor={colors.bg} style={{ padding: 16 }}>
+      <PageHeader
+        title="Roleplay"
+        left={<BackButton />}
+        right={
+          <Pressable onPress={() => router.push("/history" as any)}>
+            <Text style={{ color: colors.accent, fontWeight: "700" }}>History</Text>
+          </Pressable>
+        }
+      />
+
+      <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }}>
+        <Card style={{ gap: 8 }}>
+          <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "800" }}>
+            {activeSession.scenario.title}
+          </Text>
+          <Text style={{ color: colors.muted, lineHeight: 20 }}>
+            {activeSession.config.userRole} | {activeSession.config.partnerStyle}
+          </Text>
+          <Text style={{ color: colors.muted, lineHeight: 22 }}>
+            Objective: {activeSession.config.objective}
+          </Text>
+        </Card>
+
+        <Card style={{ gap: 12 }}>
+          <View style={{ alignItems: "center", gap: 8 }}>
+            <Animated.View
+              style={{
+                transform: [{ scale: pulse }],
+                borderRadius: 999,
+                padding: 6,
+                backgroundColor: isRecording ? "#ff4d4d20" : "transparent",
+              }}
+            >
+              <Pressable
+                disabled={isBusy || activeSession.status === "playing"}
+                onPress={onRecordPress}
+                style={{
+                  height: 128,
+                  width: 128,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isRecording ? "#ff5454" : colors.accent,
+                  opacity: isBusy || activeSession.status === "playing" ? 0.55 : 1,
+                }}
+              >
+                <Ionicons
+                  name={isRecording ? "stop" : "mic"}
+                  size={34}
+                  color={isRecording ? "#120000" : colors.onAccent}
+                />
+              </Pressable>
+            </Animated.View>
+            <Text style={{ color: colors.fg, fontWeight: "800", fontSize: 18 }}>
+              {isRecording ? "Recording turn..." : "Tap to record your next turn"}
+            </Text>
+            <Text style={{ color: colors.muted }}>
+              {isRecording
+                ? `Live timer ${clock}`
+                : activeSession.status === "submitting"
+                ? "Processing turn..."
+                : activeSession.status === "playing"
+                ? "AI reply ready"
+                : activeSession.status === "ending"
+                ? "Building summary..."
+                : "Ready"}
+            </Text>
+          </View>
+
+          {activeSession.error ? (
+            <Card bg="#2a1616" border="#613131" style={{ gap: 10 }}>
+              <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
+                Turn issue
+              </Text>
+              <Text style={{ color: "#ffd9d9" }}>{activeSession.error}</Text>
+              <AppButton
+                title="Retry Last Turn"
+                onPress={onRetry}
+                color={colors.accent}
+                fg={colors.onAccent}
+              />
+            </Card>
+          ) : null}
+
+          {activeSession.latestAssistantAudioUri ? (
+            <AssistantPlayback
+              uri={activeSession.latestAssistantAudioUri}
+              onPlaybackStart={() => setPlaybackState(true)}
+              onPlaybackEnd={() => setPlaybackState(false)}
+              onPlaybackError={(message) => {
+                setPlaybackState(false);
+                setPlaybackError(message);
+              }}
+            />
+          ) : null}
+
+          {playbackError ? (
+            <Text style={{ color: "#ffb3b3" }}>
+              Voice playback failed. You can continue using the visible transcript.
+            </Text>
+          ) : null}
+        </Card>
+
+        <Card style={{ gap: 12, minHeight: 280 }}>
+          <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "700" }}>
+            Conversation
+          </Text>
+          {messages.length ? (
+            messages.map((message) => <MessageBubble key={message.id} item={message} />)
+          ) : (
+            <Text style={{ color: colors.muted, lineHeight: 22 }}>
+              No turns yet. Record your opening message to start the practice session.
+            </Text>
+          )}
+        </Card>
+
+        <AppButton
+          title="End Session"
+          color={colors.accent}
+          fg={colors.onAccent}
+          disabled={!activeSession.turns.length || isRecording || isBusy}
+          onPress={onEndSession}
+        />
+      </ScrollView>
+    </Screen>
+  );
+}

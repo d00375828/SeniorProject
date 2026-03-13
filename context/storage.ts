@@ -1,14 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const KEYS = {
-  history: "history",
-  criteria: "criteria",
-  avgScore: "avgScore",
-  profile: "profile",
-  notifPrefs: "notifPrefs",
-  privacyPrefs: "privacyPrefs",
-  isAuthed: "isAuthed",
   themeMode: "themeMode",
+  savedSessions: "savedSessions",
 } as const;
 
 export async function getJson<T>(key: string, fallback: T): Promise<T> {

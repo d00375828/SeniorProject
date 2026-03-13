@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "shadow-app",
-    "slug": "shadow-sales",
+    "slug": "shadow",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
@@ -14,13 +14,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "co.shadowsales.mobile",
+      "bundleIdentifier": "co.shadow.mobile",
       "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio"],
         "NSPhotoLibraryUsageDescription": "We need access to your photo library to select a profile picture.",
-        "NSMicrophoneUsageDescription": "We need access to your microphone to record your sales pitches.",
+        "NSMicrophoneUsageDescription": "We need access to your microphone so you can practice speaking out loud.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -35,7 +35,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "package": "co.shadowsales.mobile"
+      "package": "co.shadow.mobile"
     },
     "web": {
       "bundler": "metro",

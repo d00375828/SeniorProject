@@ -127,12 +127,15 @@ export function useRecorder() {
 
     try {
       await recorder.stop();
+      const nextUri = recorder.uri ?? null;
       // only set URI if still current session
       if (token === sessionRef.current) {
-        setUri(recorder.uri ?? null);
+        setUri(nextUri);
       }
+      return nextUri;
     } catch (e: any) {
       Alert.alert("Stop error", String(e?.message ?? e));
+      return null;
     }
   }
 

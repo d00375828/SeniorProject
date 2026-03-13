@@ -1,10 +1,10 @@
 // Presentational chat bubble
 import { useTheme } from "@/context";
-import type { Msg } from "@/lib/chat/types";
+import type { SessionTurn } from "@/context";
 import React from "react";
 import { Text, View } from "react-native";
 
-export default function MessageBubble({ item }: { item: Msg }) {
+export default function MessageBubble({ item }: { item: SessionTurn }) {
   const { colors } = useTheme();
   const mine = item.role === "user";
 

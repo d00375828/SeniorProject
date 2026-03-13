@@ -1,54 +1,71 @@
-export type Criteria = {
-    clarity: boolean;
-    empathy: boolean;
-    conciseness: boolean;
-    objectionHandling: boolean;
-    productKnowledge: boolean;
-  };
-  
-  export type AiDialogueLine = { speaker: "salesman" | "prospect"; text: string };
-  export type AiReport = {
-    transcriptionId: string;
-    overallScore: number;
-    strengths: string[];
-    areasForImprovement: string[];
-    recommendations: string[];
-    summary: string;
-    metrics: Record<string, number>;
-    dialogue: AiDialogueLine[];
-    serverTimestamp?: string;
-    fileSizeBytes?: number;
-  };
-  
-  export type RecordingInput = {
-    transcript: string;
-    notes: string;
-    uri: string | null;
-    createdAt: number;
-    ai?: AiReport;
-  };
-  
-  export type Grade = {
-    id: number;
-    createdAt: number;
-    score: number;
-    positives: string[];
-    suggestions: string[];
-  };
-  
-  export type NotifPrefs = { push: boolean; email: boolean; sms: boolean };
-  
-  export type AccessEntry = {
-    name: string;
-    role: string;
-    relation: "manager" | "friend" | "owner";
-  };
-  
-  export type PrivacyPrefs = {
-    activeListening: boolean;
-    analytics: boolean;
-    location: boolean;
-    microphone: boolean;
-    access: AccessEntry[];
-  };
-  
+export type SessionRole = "user" | "assistant";
+
+export type SessionConfig = {
+  scenarioId: string;
+  userRole: string;
+  objective: string;
+  partnerStyle: string;
+};
+
+export type ScenarioDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: "Warm-up" | "Core" | "Advanced";
+  persona: string;
+  defaultConfig: Omit<SessionConfig, "scenarioId">;
+};
+
+export type SessionTurn = {
+  id: string;
+  role: SessionRole;
+  text: string;
+  createdAt: number;
+};
+
+export type SessionStatus =
+  | "idle"
+  | "ready"
+  | "recording"
+  | "submitting"
+  | "playing"
+  | "ending"
+  | "summary-ready";
+
+export type TurnResponse = {
+  userTranscript: string;
+  assistantText: string;
+  assistantAudioUri?: string | null;
+  assistantAudioMimeType?: string | null;
+};
+
+export type SessionSummary = {
+  transcript: string;
+  overview: string;
+  wins: string[];
+  drills: string[];
+  nextStep: string;
+};
+
+export type ActiveSession = {
+  id: string;
+  scenario: ScenarioDefinition;
+  config: SessionConfig;
+  turns: SessionTurn[];
+  status: SessionStatus;
+  latestAssistantText: string | null;
+  latestAssistantAudioUri: string | null;
+  lastTurnAudioUri: string | null;
+  error: string | null;
+  createdAt: number;
+};
+
+export type SavedSession = {
+  id: string;
+  createdAt: number;
+  scenario: ScenarioDefinition;
+  config: SessionConfig;
+  turns: SessionTurn[];
+  summary: SessionSummary;
+};
