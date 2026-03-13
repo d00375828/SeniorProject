@@ -9,5 +9,8 @@
   "scripts": {
     "frontend": "npm run start -w shadow-frontend",
     "backend": "npm run start -w shadow-backend"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   }
 }
