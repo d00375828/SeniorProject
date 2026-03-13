@@ -40,3 +40,16 @@ graph TD
     * **Strengths** and **Areas for Improvement**
     * **Targeted Drills** for future practice.
 * **Review:** The user is presented with the final **Summary Screen**.
+
+
+## 🚀 Future Roadmap (Deferred Features)
+
+While the core functionality is the current focus, the following features are planned for future development as time permits:
+
+* **User Authentication:** Secure login and personalized user profiles.
+* **Server-Side Database:** Persistent storage for user data and session logs.
+* **Analytics Dashboard:** Visual representation of performance trends over time.
+* **Real-time Streaming:** Immediate audio processing for lower latency.
+* **Websockets:** Enhanced bi-directional communication for more fluid interactions.
+* **Multi-User Support:** Collaboration or competitive modes between different accounts.
+* **Long-Term Progress Tracking:** Historical data analysis to monitor growth across multiple sessions.
