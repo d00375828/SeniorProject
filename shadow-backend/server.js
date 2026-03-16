@@ -18,6 +18,6 @@ app.get("/", (_req, res) => {
   res.json({ message: "shadow-backend is running" });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on port ${PORT}`);
 });
