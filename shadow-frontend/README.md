@@ -14,7 +14,7 @@ graph TD
     End --> Final[Backend Processes Summary & Scores]
     Final --> Summary([Show Summary Screen])
 
-    ## 🔄 User Flow
+    ##  User Flow
 
 ### 1. Initial Setup
 * **Open Application:** Launch the app to begin.
