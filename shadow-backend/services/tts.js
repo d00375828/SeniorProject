@@ -1,12 +1,12 @@
 const fs = require("fs");
 const textToSpeech = require("@google-cloud/text-to-speech");
 
-async function runTest() {
+async function textToSpeechMp3(text) {
   const client = new textToSpeech.TextToSpeechClient();
 
   const request = {
     input: {
-      text: "Leo really loves barbies. He cant wait for his mom to bring one home from her trip",
+      text,
     },
     voice: {
       languageCode: "en-US",
@@ -18,9 +18,16 @@ async function runTest() {
   };
 
   const [response] = await client.synthesizeSpeech(request);
-
-  fs.writeFileSync("tts-test.mp3", response.audioContent, "binary");
-  console.log("Wrote tts-test.mp3");
+  return Buffer.from(response.audioContent).toString("base64");
 }
 
-runTest().catch(console.error);
+async function writeTtsPreview(text, outputPath = "tts-test.mp3") {
+  const base64 = await textToSpeechMp3(text);
+  fs.writeFileSync(outputPath, Buffer.from(base64, "base64"));
+  return outputPath;
+}
+
+module.exports = {
+  textToSpeechMp3,
+  writeTtsPreview,
+};

@@ -1,5 +1,5 @@
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { useTheme } from "@/context";
@@ -21,29 +21,40 @@ export default function AssistantPlayback({
   const player = useAudioPlayer(uri);
   const status = useAudioPlayerStatus(player);
   const [playing, setPlaying] = useState(false);
+  const onPlaybackStartRef = useRef(onPlaybackStart);
+  const onPlaybackEndRef = useRef(onPlaybackEnd);
+  const onPlaybackErrorRef = useRef(onPlaybackError);
+
+  useEffect(() => {
+    onPlaybackStartRef.current = onPlaybackStart;
+    onPlaybackEndRef.current = onPlaybackEnd;
+    onPlaybackErrorRef.current = onPlaybackError;
+  }, [onPlaybackStart, onPlaybackEnd, onPlaybackError]);
 
   useEffect(() => {
     async function playNow() {
       try {
-        onPlaybackStart?.();
+        onPlaybackStartRef.current?.();
         setPlaying(true);
         await player.seekTo(0);
         await player.play();
       } catch (error: any) {
         setPlaying(false);
-        onPlaybackError?.(error?.message ?? "Assistant audio could not be played.");
+        onPlaybackErrorRef.current?.(
+          error?.message ?? "Assistant audio could not be played."
+        );
       }
     }
 
     playNow();
-  }, [onPlaybackEnd, onPlaybackError, onPlaybackStart, player, uri]);
+  }, [player, uri]);
 
   useEffect(() => {
     setPlaying(status.playing);
     if (status.didJustFinish) {
-      onPlaybackEnd?.();
+      onPlaybackEndRef.current?.();
     }
-  }, [onPlaybackEnd, status.didJustFinish, status.playing]);
+  }, [status.didJustFinish, status.playing]);
 
   return (
     <View
@@ -60,13 +71,15 @@ export default function AssistantPlayback({
       <Pressable
         onPress={async () => {
           try {
-            onPlaybackStart?.();
+            onPlaybackStartRef.current?.();
             setPlaying(true);
             await player.seekTo(0);
             await player.play();
           } catch (error: any) {
             setPlaying(false);
-            onPlaybackError?.(error?.message ?? "Assistant audio could not be played.");
+            onPlaybackErrorRef.current?.(
+              error?.message ?? "Assistant audio could not be played."
+            );
           }
         }}
         style={{

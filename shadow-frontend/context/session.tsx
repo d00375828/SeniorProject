@@ -5,6 +5,7 @@ import { SCENARIOS, getScenarioById } from "@/lib/roleplay/scenarios";
 
 import {
   ActiveSession,
+  FailedTurnPreview,
   SavedSession,
   ScenarioDefinition,
   SessionConfig,
@@ -24,6 +25,7 @@ type SessionContextType = {
   submitTurn: (audioUri: string) => Promise<TurnResponse>;
   retryLastTurn: () => Promise<TurnResponse>;
   setPlaybackState: (isPlaying: boolean) => void;
+  failLatestPlayback: (message: string) => void;
   endSession: () => Promise<SessionSummary>;
   saveCurrentSummary: () => Promise<SavedSession>;
   clearCurrentFlow: () => void;
@@ -82,6 +84,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       latestAssistantText: null,
       latestAssistantAudioUri: null,
       lastTurnAudioUri: null,
+      lastTurnIds: null,
+      failedTurnPreview: null,
       error: null,
       createdAt: Date.now(),
     });
@@ -103,6 +107,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
             ...current,
             status: "submitting",
             lastTurnAudioUri: audioUri,
+            failedTurnPreview: null,
             error: null,
           }
         : current
@@ -110,6 +115,31 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const response = await submitRoleplayTurn(snapshot.config, snapshot.turns, audioUri);
+      const failedTurnPreview: FailedTurnPreview = {
+        userTranscript: response.userTranscript,
+        assistantText: response.assistantText,
+      };
+
+      if (!response.assistantAudioUri) {
+        const message =
+          "The roleplay backend returned text without assistant audio. Retry this turn after fixing voice generation.";
+        setActiveSession((current) => {
+          if (!current || current.id !== snapshot?.id) return current;
+          return {
+            ...current,
+            status: "ready",
+            latestAssistantText: null,
+            latestAssistantAudioUri: null,
+            lastTurnIds: null,
+            failedTurnPreview,
+            error: message,
+          };
+        });
+        throw new Error(message);
+      }
+
+      const userTurnId = buildId("turn");
+      const assistantTurnId = buildId("turn");
 
       setActiveSession((current) => {
         if (!current || current.id !== snapshot?.id) return current;
@@ -117,13 +147,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         const appendedTurns: SessionTurn[] = [
           ...current.turns,
           {
-            id: buildId("turn"),
+            id: userTurnId,
             role: "user",
             text: response.userTranscript,
             createdAt: Date.now(),
           },
           {
-            id: buildId("turn"),
+            id: assistantTurnId,
             role: "assistant",
             text: response.assistantText,
             createdAt: Date.now() + 1,
@@ -133,9 +163,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return {
           ...current,
           turns: appendedTurns,
-          status: response.assistantAudioUri ? "playing" : "ready",
+          status: "playing",
           latestAssistantText: response.assistantText,
           latestAssistantAudioUri: response.assistantAudioUri ?? null,
+          lastTurnIds: [userTurnId, assistantTurnId],
+          failedTurnPreview: null,
           error: null,
         };
       });
@@ -148,7 +180,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return {
           ...current,
           status: "ready",
+          latestAssistantText: null,
           latestAssistantAudioUri: null,
+          lastTurnIds: null,
           error: message,
         };
       });
@@ -169,6 +203,38 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return {
         ...current,
         status: isPlaying ? "playing" : "ready",
+        lastTurnIds: isPlaying ? current.lastTurnIds : null,
+      };
+    });
+  }
+
+  function failLatestPlayback(message: string) {
+    setActiveSession((current) => {
+      if (!current) return current;
+
+      const nextTurns = current.lastTurnIds?.length
+        ? current.turns.filter((turn) => !current.lastTurnIds?.includes(turn.id))
+        : current.turns;
+
+      const failedTurnPreview =
+        current.lastTurnIds?.length && current.turns.length >= 2
+          ? {
+              userTranscript:
+                current.turns.find((turn) => turn.id === current.lastTurnIds?.[0])?.text ?? "",
+              assistantText:
+                current.turns.find((turn) => turn.id === current.lastTurnIds?.[1])?.text ?? "",
+            }
+          : current.failedTurnPreview;
+
+      return {
+        ...current,
+        turns: nextTurns,
+        status: "ready",
+        latestAssistantText: null,
+        latestAssistantAudioUri: null,
+        lastTurnIds: null,
+        failedTurnPreview,
+        error: message,
       };
     });
   }
@@ -245,6 +311,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       submitTurn,
       retryLastTurn,
       setPlaybackState,
+      failLatestPlayback,
       endSession,
       saveCurrentSummary,
       clearCurrentFlow,

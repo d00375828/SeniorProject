@@ -4,13 +4,36 @@ import {
   SessionTurn,
   TurnResponse,
 } from "@/context";
-import {
-  ROLEPLAY_END_ENDPOINT,
-  ROLEPLAY_TURN_ENDPOINT,
-  USE_ROLEPLAY_MOCKS,
-} from "@/lib/api";
+import { getRoleplayEndEndpoint, getRoleplayTurnEndpoint } from "@/lib/api";
 
-import { mockEndSession, mockSubmitTurn } from "./mock";
+function inferAudioExtension(audioUri: string) {
+  const cleanedUri = audioUri.split("?")[0]?.toLowerCase() ?? "";
+  if (cleanedUri.endsWith(".wav")) return "wav";
+  if (cleanedUri.endsWith(".caf")) return "caf";
+  if (cleanedUri.endsWith(".mp3")) return "mp3";
+  if (cleanedUri.endsWith(".webm")) return "webm";
+  if (cleanedUri.endsWith(".aac")) return "aac";
+  if (cleanedUri.endsWith(".m4a")) return "m4a";
+  return "m4a";
+}
+
+function inferAudioMimeType(extension: string) {
+  switch (extension) {
+    case "wav":
+      return "audio/wav";
+    case "caf":
+      return "audio/x-caf";
+    case "mp3":
+      return "audio/mpeg";
+    case "webm":
+      return "audio/webm";
+    case "aac":
+      return "audio/aac";
+    case "m4a":
+    default:
+      return "audio/m4a";
+  }
+}
 
 function asAudioUri(value: unknown, mimeType?: string | null) {
   if (typeof value !== "string" || !value.trim()) return null;
@@ -91,11 +114,26 @@ async function parseJson(response: Response) {
   }
 }
 
+async function parseError(response: Response) {
+  const payload = await parseJson(response);
+  const message =
+    typeof payload?.error === "string"
+      ? payload.error
+      : typeof payload?.message === "string"
+      ? payload.message
+      : null;
+
+  return message;
+}
+
 async function postTurn(
   config: SessionConfig,
   history: SessionTurn[],
   audioUri: string
 ) {
+  const extension = inferAudioExtension(audioUri);
+  const mimeType = inferAudioMimeType(extension);
+
   const body = new FormData();
   body.append("config", JSON.stringify(config));
   body.append("history", JSON.stringify(history));
@@ -103,25 +141,26 @@ async function postTurn(
     "audio",
     {
       uri: audioUri,
-      name: "turn.m4a",
-      type: "audio/m4a",
+      name: `turn.${extension}`,
+      type: mimeType,
     } as any
   );
 
-  const response = await fetch(ROLEPLAY_TURN_ENDPOINT, {
+  const response = await fetch(getRoleplayTurnEndpoint(), {
     method: "POST",
     body,
   });
 
   if (!response.ok) {
-    throw new Error(`Turn request failed (${response.status})`);
+    const message = await parseError(response);
+    throw new Error(message ?? `Turn request failed (${response.status})`);
   }
 
   return normalizeTurnResponse(await parseJson(response));
 }
 
 async function postSummary(config: SessionConfig, turns: SessionTurn[]) {
-  const response = await fetch(ROLEPLAY_END_ENDPOINT, {
+  const response = await fetch(getRoleplayEndEndpoint(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -130,7 +169,8 @@ async function postSummary(config: SessionConfig, turns: SessionTurn[]) {
   });
 
   if (!response.ok) {
-    throw new Error(`Summary request failed (${response.status})`);
+    const message = await parseError(response);
+    throw new Error(message ?? `Summary request failed (${response.status})`);
   }
 
   return normalizeSummaryResponse(await parseJson(response), turns);
@@ -141,17 +181,13 @@ export async function submitRoleplayTurn(
   history: SessionTurn[],
   audioUri: string
 ) {
-  if (USE_ROLEPLAY_MOCKS) {
-    return mockSubmitTurn(config, history);
-  }
-
   try {
     return await postTurn(config, history, audioUri);
-  } catch (error) {
-    if (__DEV__) {
-      return mockSubmitTurn(config, history);
+  } catch (error: any) {
+    if (error instanceof Error) {
+      throw error;
     }
-    throw error;
+    throw new Error("Unable to reach the roleplay turn endpoint.");
   }
 }
 
@@ -159,16 +195,12 @@ export async function endRoleplaySession(
   config: SessionConfig,
   turns: SessionTurn[]
 ) {
-  if (USE_ROLEPLAY_MOCKS) {
-    return mockEndSession(config, turns);
-  }
-
   try {
     return await postSummary(config, turns);
-  } catch (error) {
-    if (__DEV__) {
-      return mockEndSession(config, turns);
+  } catch (error: any) {
+    if (error instanceof Error) {
+      throw error;
     }
-    throw error;
+    throw new Error("Unable to reach the roleplay summary endpoint.");
   }
 }

@@ -1,8 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
-
-dotenv.config();
+require("./loadEnv");
 
 const roleplayRoutes = require("./routes/roleplay");
 

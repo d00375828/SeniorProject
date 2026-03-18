@@ -1,10 +1,9 @@
 const fs = require("fs");
 const speech = require("@google-cloud/speech");
 
-async function runTest() {
+async function speechToText(fileName) {
   const client = new speech.SpeechClient();
 
-  const fileName = "./shadow-practice.wav";
   const audioBytes = fs.readFileSync(fileName).toString("base64");
 
   const request = {
@@ -23,7 +22,9 @@ async function runTest() {
     .map((result) => result.alternatives[0].transcript)
     .join("\n");
 
-  console.log("Transcript:", transcript);
+  return transcript.trim();
 }
 
-runTest().catch(console.error);
+module.exports = {
+  speechToText,
+};

@@ -12,12 +12,30 @@ const {
 const { textToSpeechMp3 } = require("../services/tts");
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (_req, file, cb) => {
+    const originalExtension = path.extname(file.originalname || "").toLowerCase();
+    const safeExtension = originalExtension || ".bin";
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExtension}`);
+  },
+});
+const upload = multer({ storage });
 
-router.post("/turn", upload.single("audio"), async (req, res) => {
+router.post(
+  "/turn",
+  (req, _res, next) => {
+    console.log("[TURN] request started");
+    next();
+  },
+  upload.single("audio"),
+  async (req, res) => {
   let wavPath = null;
 
   try {
+    console.log("[TURN] upload complete");
     const config = JSON.parse(req.body.config || "{}");
     const history = JSON.parse(req.body.history || "[]");
 
@@ -31,6 +49,11 @@ router.post("/turn", upload.single("audio"), async (req, res) => {
     console.log("[TURN] config:", config);
     console.log("[TURN] history length:", history.length);
     console.log("[TURN] uploaded file:", inputPath);
+    console.log("[TURN] upload metadata:", {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+    });
 
     await convertM4aToWav(inputPath, wavPath);
     console.log("[TURN] wav created:", wavPath);

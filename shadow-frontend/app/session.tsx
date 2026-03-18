@@ -21,6 +21,7 @@ export default function SessionScreen() {
     retryLastTurn,
     endSession,
     setPlaybackState,
+    failLatestPlayback,
   } = useSession();
   const { isRecording, seconds, pulse, start, stop, reset } = useRecorder();
   const [playbackError, setPlaybackError] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export default function SessionScreen() {
     localBusy ||
     activeSession.status === "submitting" ||
     activeSession.status === "ending";
+  const hasTurnError = Boolean(activeSession.error);
 
   async function onRecordPress() {
     try {
@@ -132,7 +134,7 @@ export default function SessionScreen() {
               }}
             >
               <Pressable
-                disabled={isBusy || activeSession.status === "playing"}
+                disabled={isBusy || activeSession.status === "playing" || hasTurnError}
                 onPress={onRecordPress}
                 style={{
                   height: 128,
@@ -141,7 +143,8 @@ export default function SessionScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: isRecording ? "#ff5454" : colors.accent,
-                  opacity: isBusy || activeSession.status === "playing" ? 0.55 : 1,
+                  opacity:
+                    isBusy || activeSession.status === "playing" || hasTurnError ? 0.55 : 1,
                 }}
               >
                 <Ionicons
@@ -160,9 +163,11 @@ export default function SessionScreen() {
                 : activeSession.status === "submitting"
                 ? "Processing turn..."
                 : activeSession.status === "playing"
-                ? "AI reply ready"
+                ? "Playing AI reply..."
                 : activeSession.status === "ending"
                 ? "Building summary..."
+                : activeSession.error
+                ? "Retry the last turn before recording again"
                 : "Ready"}
             </Text>
           </View>
@@ -173,6 +178,19 @@ export default function SessionScreen() {
                 Turn issue
               </Text>
               <Text style={{ color: "#ffd9d9" }}>{activeSession.error}</Text>
+              {activeSession.failedTurnPreview ? (
+                <Card bg="#351d1d" border="#613131" style={{ gap: 8 }}>
+                  <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
+                    Failed turn preview
+                  </Text>
+                  <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
+                    You: {activeSession.failedTurnPreview.userTranscript || "Transcript unavailable"}
+                  </Text>
+                  <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
+                    AI: {activeSession.failedTurnPreview.assistantText || "Reply unavailable"}
+                  </Text>
+                </Card>
+              ) : null}
               <AppButton
                 title="Retry Last Turn"
                 onPress={onRetry}
@@ -188,15 +206,18 @@ export default function SessionScreen() {
               onPlaybackStart={() => setPlaybackState(true)}
               onPlaybackEnd={() => setPlaybackState(false)}
               onPlaybackError={(message) => {
-                setPlaybackState(false);
                 setPlaybackError(message);
+                failLatestPlayback(
+                  message ||
+                    "Assistant audio playback failed. Retry the turn so the voice reply completes successfully."
+                );
               }}
             />
           ) : null}
 
           {playbackError ? (
             <Text style={{ color: "#ffb3b3" }}>
-              Voice playback failed. You can continue using the visible transcript.
+              Voice playback failed. Review the preview and retry the turn.
             </Text>
           ) : null}
         </Card>
@@ -218,7 +239,7 @@ export default function SessionScreen() {
           title="End Session"
           color={colors.accent}
           fg={colors.onAccent}
-          disabled={!activeSession.turns.length || isRecording || isBusy}
+          disabled={!activeSession.turns.length || isRecording || isBusy || hasTurnError}
           onPress={onEndSession}
         />
       </ScrollView>

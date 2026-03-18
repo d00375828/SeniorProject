@@ -24,6 +24,11 @@ export type SessionTurn = {
   createdAt: number;
 };
 
+export type FailedTurnPreview = {
+  userTranscript: string;
+  assistantText: string;
+};
+
 export type SessionStatus =
   | "idle"
   | "ready"
@@ -57,6 +62,8 @@ export type ActiveSession = {
   latestAssistantText: string | null;
   latestAssistantAudioUri: string | null;
   lastTurnAudioUri: string | null;
+  lastTurnIds: string[] | null;
+  failedTurnPreview: FailedTurnPreview | null;
   error: string | null;
   createdAt: number;
 };
