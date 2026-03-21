@@ -12,9 +12,13 @@ const {
 const { textToSpeechMp3 } = require("../services/tts");
 
 const router = express.Router();
+const uploadsDir = path.resolve(__dirname, "..", "uploads");
+
+fs.mkdirSync(uploadsDir, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
     const originalExtension = path.extname(file.originalname || "").toLowerCase();
@@ -44,7 +48,7 @@ router.post(
     }
 
     const inputPath = req.file.path;
-    wavPath = path.join("uploads", `${req.file.filename}.wav`);
+    wavPath = path.join(uploadsDir, `${req.file.filename}.wav`);
 
     console.log("[TURN] config:", config);
     console.log("[TURN] history length:", history.length);
