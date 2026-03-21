@@ -7,6 +7,12 @@ const roleplayRoutes = require("./routes/roleplay");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+console.log("Gemini key loaded:", !!process.env.GEMINI_API_KEY);
+console.log(
+  "Google credentials path loaded:",
+  !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+);
+
 app.use(cors());
 app.use(express.json());
 
