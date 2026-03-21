@@ -13,7 +13,7 @@
           "appleId": "anr1506@icloud.com"
         },
         "android": {
-          "serviceAccountKeyPath": "./google-service-account.json"
+          "serviceAccountKeyPath": "./service-account.json"
         }
       }
     }
