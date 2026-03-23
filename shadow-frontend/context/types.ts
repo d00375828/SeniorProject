@@ -1,10 +1,22 @@
 export type SessionRole = "user" | "assistant";
 
+export type AttachmentKind = "slides" | "instructions" | "rubric" | "notes";
+
+export type SessionAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+  kind: AttachmentKind;
+  extractedText: string;
+  promptText: string;
+};
+
 export type SessionConfig = {
   scenarioId: string;
   userRole: string;
   objective: string;
   partnerStyle: string;
+  attachments?: SessionAttachment[];
 };
 
 export type ScenarioDefinition = {

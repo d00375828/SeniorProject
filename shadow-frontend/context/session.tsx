@@ -44,6 +44,13 @@ function buildTranscript(turns: SessionTurn[]) {
     .join("\n");
 }
 
+function normalizeConfig(config: SessionConfig): SessionConfig {
+  return {
+    ...config,
+    attachments: config.attachments ?? [],
+  };
+}
+
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
@@ -69,16 +76,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [hydrated, savedSessions]);
 
   function startSession(config: SessionConfig) {
-    const scenario = getScenarioById(config.scenarioId);
+    const normalizedConfig = normalizeConfig(config);
+    const scenario = getScenarioById(normalizedConfig.scenarioId);
     if (!scenario) {
-      throw new Error(`Unknown scenario: ${config.scenarioId}`);
+      throw new Error(`Unknown scenario: ${normalizedConfig.scenarioId}`);
     }
 
     setCurrentSummary(null);
     setActiveSession({
       id: buildId("session"),
       scenario,
-      config,
+      config: normalizedConfig,
       turns: [],
       status: "ready",
       latestAssistantText: null,
@@ -282,7 +290,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       id: buildId("saved"),
       createdAt: Date.now(),
       scenario: activeSession.scenario,
-      config: activeSession.config,
+      config: normalizeConfig(activeSession.config),
       turns: activeSession.turns,
       summary: currentSummary,
     };

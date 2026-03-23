@@ -38,10 +38,42 @@ export default function SummaryScreen() {
         <Text style={{ color: colors.fg, fontSize: 24, fontWeight: "800" }}>
           {activeSession.scenario.title}
         </Text>
+        {activeSession.config.attachments?.length ? (
+          <Text style={{ color: colors.muted, lineHeight: 20 }}>
+            Materials used: {activeSession.config.attachments.length}
+          </Text>
+        ) : null}
         <Text style={{ color: colors.muted, lineHeight: 22 }}>
           {currentSummary.overview}
         </Text>
       </Card>
+
+      {activeSession.config.attachments?.length ? (
+        <Card style={{ gap: 12 }}>
+          <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
+            Materials
+          </SectionTitle>
+          {activeSession.config.attachments.map((attachment) => (
+            <Card
+              key={attachment.id}
+              bg={colors.box}
+              border={colors.border}
+              style={{ gap: 8 }}
+            >
+              <Text style={{ color: colors.fg, fontWeight: "800" }}>
+                {attachment.name}
+              </Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                {attachment.kind} | {attachment.mimeType}
+              </Text>
+              <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                {attachment.promptText.slice(0, 180)}
+                {attachment.promptText.length > 180 ? "..." : ""}
+              </Text>
+            </Card>
+          ))}
+        </Card>
+      ) : null}
 
       <Card style={{ gap: 14 }}>
         <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>

@@ -1,6 +1,6 @@
-# Core System Diagrams for NEW architecture
+# Shadow Roleplay Architecture
 
-## 1) Flow Diagram (Core User Flow)
+## 1) User Flow
 
 ```mermaid
 flowchart TD
@@ -10,7 +10,7 @@ flowchart TD
     C --> D[Configure roleplay]
     D --> E[Start roleplay]
 
-    E --> F[Push to talk]
+    E --> F[Tap to record]
     F --> G[Record speech]
     G --> H[Send audio to API]
     H --> I{Turn success}
@@ -44,21 +44,21 @@ flowchart LR
 
     subgraph APP[Mobile App]
       UI[UI screens<br/>Home, Setup, Session, Summary]
-      STATE[Session state<br/>History and settings]
-      REC[Recorder<br/>Push to talk]
+      STATE[Session state<br/>Active session and saved sessions]
+      REC[Recorder<br/>Per-turn recording]
       PLAYER[Player<br/>AI voice playback]
-      MGR[Session manager<br/>Turn loop and retries]
+      MGR[Session provider<br/>Turn loop and retries]
       CLIENT[API client]
-      LOCAL[(Local save optional<br/>SQLite or storage)]
+      LOCAL[(AsyncStorage<br/>Saved sessions)]
     end
 
     subgraph BACKEND[Backend API]
       TURN[POST roleplay turn]
       SUM[POST end session]
-      ORCH[Orchestrator<br/>STT then LLM then TTS]
+      ORCH[Turn pipeline<br/>STT then Gemini then TTS]
     end
 
-    subgraph AI[Gemini]
+    subgraph AI[AI Services]
       STT[Speech to text]
       LLM[Roleplay response]
       TTS[Text to speech]
@@ -106,11 +106,11 @@ sequenceDiagram
     UI->>ROLE: initSession(config)
     ROLE-->>UI: Session ready
 
-    loop Each push-to-talk turn
-        U->>UI: Hold to talk
+    loop Each turn
+        U->>UI: Tap to start recording
         UI->>REC: start()
         REC-->>UI: recording...
-        U->>UI: Release to stop
+        U->>UI: Tap to stop
         UI->>REC: stop()
         REC-->>UI: audioChunkUri
 
@@ -139,7 +139,7 @@ sequenceDiagram
     API->>SUM: /roleplay/end
 
     SUM->>ORCH: summarizeSession(history, config)
-    ORCH->>GEM: LLM(finalTranscript + rubric prompt)
+    ORCH->>GEM: LLM(finalTranscript + coaching prompt)
     GEM-->>ORCH: coachingSummaryJSON
     ORCH-->>SUM: transcript + bullets + wins + drills
     SUM-->>API: summaryResponse
@@ -152,16 +152,16 @@ sequenceDiagram
     end
 ```
 
-## 4) System Context Diagram
+## 4) System Context
 
 ```mermaid
 flowchart TB
     USER[User]
     APP[Shadow App]
     OS[Device Audio and Permissions]
-    LOCAL[(Local Storage - SQLite )]
+    LOCAL[(Local Storage)]
     API[Roleplay Backend API]
-    GEMINI[Gemini Services - STT, LLM, TTS]
+    GEMINI[Gemini and Google Cloud Services]
 
     USER --> APP
     APP --> OS
@@ -169,3 +169,9 @@ flowchart TB
     APP --> API
     API --> GEMINI
 ```
+
+## Notes
+
+- The scenario catalog is local and typed in app code.
+- The frontend only persists completed saved sessions.
+- A turn is only successful when assistant audio is returned and playback completes.

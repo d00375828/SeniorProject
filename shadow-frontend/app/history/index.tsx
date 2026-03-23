@@ -37,6 +37,11 @@ export default function HistoryScreen() {
                   {new Date(session.createdAt).toLocaleDateString()}
                 </Text>
               </View>
+              {session.config.attachments?.length ? (
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  Materials: {session.config.attachments.length}
+                </Text>
+              ) : null}
               <Text style={{ color: colors.muted, lineHeight: 21 }}>
                 {session.summary.overview}
               </Text>

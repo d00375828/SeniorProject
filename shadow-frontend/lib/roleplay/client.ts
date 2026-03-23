@@ -1,10 +1,16 @@
 import {
+  AttachmentKind,
+  SessionAttachment,
   SessionConfig,
   SessionSummary,
   SessionTurn,
   TurnResponse,
 } from "@/context";
-import { getRoleplayEndEndpoint, getRoleplayTurnEndpoint } from "@/lib/api";
+import {
+  getRoleplayContextEndpoint,
+  getRoleplayEndEndpoint,
+  getRoleplayTurnEndpoint,
+} from "@/lib/api";
 
 function inferAudioExtension(audioUri: string) {
   const cleanedUri = audioUri.split("?")[0]?.toLowerCase() ?? "";
@@ -104,6 +110,40 @@ function normalizeSummaryResponse(payload: any, turns: SessionTurn[]): SessionSu
   };
 }
 
+function normalizeAttachmentResponse(payload: any): SessionAttachment {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Attachment upload returned an invalid response.");
+  }
+
+  if (
+    payload.kind !== "slides" &&
+    payload.kind !== "instructions" &&
+    payload.kind !== "rubric" &&
+    payload.kind !== "notes"
+  ) {
+    throw new Error("Attachment upload returned an invalid attachment kind.");
+  }
+
+  return {
+    id:
+      typeof payload.id === "string" && payload.id.trim()
+        ? payload.id
+        : `attachment-${Date.now()}`,
+    name:
+      typeof payload.name === "string" && payload.name.trim()
+        ? payload.name
+        : "Uploaded file",
+    mimeType:
+      typeof payload.mimeType === "string" && payload.mimeType.trim()
+        ? payload.mimeType
+        : "application/octet-stream",
+    kind: payload.kind as AttachmentKind,
+    extractedText:
+      typeof payload.extractedText === "string" ? payload.extractedText : "",
+    promptText: typeof payload.promptText === "string" ? payload.promptText : "",
+  };
+}
+
 async function parseJson(response: Response) {
   const text = await response.text();
   if (!text) return {};
@@ -176,6 +216,36 @@ async function postSummary(config: SessionConfig, turns: SessionTurn[]) {
   return normalizeSummaryResponse(await parseJson(response), turns);
 }
 
+async function postContextUpload(
+  fileUri: string,
+  fileName: string,
+  mimeType: string,
+  kind: AttachmentKind
+) {
+  const body = new FormData();
+  body.append("kind", kind);
+  body.append(
+    "file",
+    {
+      uri: fileUri,
+      name: fileName,
+      type: mimeType,
+    } as any
+  );
+
+  const response = await fetch(getRoleplayContextEndpoint(), {
+    method: "POST",
+    body,
+  });
+
+  if (!response.ok) {
+    const message = await parseError(response);
+    throw new Error(message ?? `Context upload failed (${response.status})`);
+  }
+
+  return normalizeAttachmentResponse(await parseJson(response));
+}
+
 export async function submitRoleplayTurn(
   config: SessionConfig,
   history: SessionTurn[],
@@ -202,5 +272,21 @@ export async function endRoleplaySession(
       throw error;
     }
     throw new Error("Unable to reach the roleplay summary endpoint.");
+  }
+}
+
+export async function uploadRoleplayContext(
+  fileUri: string,
+  fileName: string,
+  mimeType: string,
+  kind: AttachmentKind
+) {
+  try {
+    return await postContextUpload(fileUri, fileName, mimeType, kind);
+  } catch (error: any) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unable to reach the roleplay context endpoint.");
   }
 }

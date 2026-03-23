@@ -30,6 +30,6 @@ export function getRoleplayEndEndpoint() {
   return buildEndpoint("/roleplay/end");
 }
 
-// Legacy exports retained for unused older modules still on disk.
-export const AUDIO_ENDPOINT = "";
-export const CHAT_ENDPOINT = "";
+export function getRoleplayContextEndpoint() {
+  return buildEndpoint("/roleplay/context");
+}

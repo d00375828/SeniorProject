@@ -45,10 +45,42 @@ export default function SavedSessionDetail() {
         <Text style={{ color: colors.muted }}>
           {new Date(session.createdAt).toLocaleString()}
         </Text>
+        {session.config.attachments?.length ? (
+          <Text style={{ color: colors.muted, lineHeight: 20 }}>
+            Materials used: {session.config.attachments.length}
+          </Text>
+        ) : null}
         <Text style={{ color: colors.muted, lineHeight: 22 }}>
           {session.summary.overview}
         </Text>
       </Card>
+
+      {session.config.attachments?.length ? (
+        <Card style={{ gap: 12 }}>
+          <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
+            Materials
+          </SectionTitle>
+          {session.config.attachments.map((attachment) => (
+            <Card
+              key={attachment.id}
+              bg={colors.box}
+              border={colors.border}
+              style={{ gap: 8 }}
+            >
+              <Text style={{ color: colors.fg, fontWeight: "800" }}>
+                {attachment.name}
+              </Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                {attachment.kind} | {attachment.mimeType}
+              </Text>
+              <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                {attachment.promptText.slice(0, 180)}
+                {attachment.promptText.length > 180 ? "..." : ""}
+              </Text>
+            </Card>
+          ))}
+        </Card>
+      ) : null}
 
       <Card style={{ gap: 14 }}>
         <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>

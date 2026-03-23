@@ -121,6 +121,11 @@ export default function SessionScreen() {
           <Text style={{ color: colors.muted, lineHeight: 22 }}>
             Objective: {activeSession.config.objective}
           </Text>
+          {activeSession.config.attachments?.length ? (
+            <Text style={{ color: colors.muted, lineHeight: 20 }}>
+              Materials loaded: {activeSession.config.attachments.length}
+            </Text>
+          ) : null}
         </Card>
 
         <Card style={{ gap: 12 }}>

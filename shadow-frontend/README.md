@@ -1,55 +1,59 @@
-graph TD
-    Start([User Opens App]) --> Scenario[Choose Scenario]
-    Scenario --> Config[Configure Context]
-    Config --> Session[Start Session]
-    
-    subgraph Loop [Interaction Loop]
-    Record[Press & Hold to Record] --> Process[App Stops & Sends Audio + Config]
-    Process --> Backend[Backend Returns Transcript + AI Audio]
-    Backend --> Play[App Updates History & Plays AI Audio]
-    Play -.-> Record
-    end
+# Shadow Frontend
 
-    Play --> End[User Taps End Session]
-    End --> Final[Backend Processes Summary & Scores]
-    Final --> Summary([Show Summary Screen])
+Shadow is an Expo mobile app for voice-first roleplay practice. The app lets a user choose a scenario, configure the session, speak one turn at a time, hear the AI partner reply, and finish with a coaching summary that can be saved locally.
 
-    ##  User Flow
+## Product Flow
 
-### 1. Initial Setup
-* **Open Application:** Launch the app to begin.
-* **Select Scenario:** Choose the specific environment or simulation.
-* **Configure Context:** Set the parameters and goals for the session.
-* **Start Session:** Initialize the live interaction.
+`Home -> Setup -> Session -> Summary -> History`
 
-### 2. Interaction Loop
-* **Record:** User presses and holds the record button to speak.
-* **Process:** Upon release, the app captures the audio and sends it to the backend along with the current conversation history and configuration.
-* **Response:** The backend processes the input and returns:
-    * User Transcript
-    * AI Text Response
-    * AI Generated Audio
-* **Playback:** The app updates the conversation history UI and plays the AI audio response.
-* **Repeat:** This cycle continues until the user chooses to conclude the session.
+- `Home`: local scenario catalog
+- `Setup`: role, objective, and partner style
+- `Session`: record one turn, submit audio, receive transcript + AI reply + AI voice, retry failed turns, end session
+- `Summary`: transcript and coaching summary
+- `History`: locally saved completed sessions
 
-### 3. Session Wrap-up & Analysis
-* **End Session:** User taps to finish the interaction.
-* **Final Evaluation:** The app sends the full session history to the backend for analysis.
-* **Feedback Generation:** The backend returns a comprehensive breakdown including:
-    * **Performance Scores** and a **Summary**
-    * **Strengths** and **Areas for Improvement**
-    * **Targeted Drills** for future practice.
-* **Review:** The user is presented with the final **Summary Screen**.
+## Frontend Architecture
 
+- `app/`: Expo Router screens for the roleplay flow
+- `context/session.tsx`: active session state, retry handling, local save/load
+- `context/types.ts`: normalized app types for scenarios, turns, summaries, and saved sessions
+- `hooks/useRecorder.ts`: microphone permission and per-turn recording
+- `lib/roleplay/client.ts`: backend contract for `/roleplay/turn` and `/roleplay/end`
+- `lib/roleplay/scenarios.ts`: typed local scenario catalog
+- `components/`: shared UI and playback components
 
-## 🚀 Future Roadmap (Deferred Features)
+## Backend Contract
 
-While the core functionality is the current focus, the following features are planned for future development as time permits:
+The frontend expects these endpoints:
 
-* **User Authentication:** Secure login and personalized user profiles.
-* **Server-Side Database:** Persistent storage for user data and session logs.
-* **Analytics Dashboard:** Visual representation of performance trends over time.
-* **Real-time Streaming:** Immediate audio processing for lower latency.
-* **Websockets:** Enhanced bi-directional communication for more fluid interactions.
-* **Multi-User Support:** Collaboration or competitive modes between different accounts.
-* **Long-Term Progress Tracking:** Historical data analysis to monitor growth across multiple sessions.
+- `POST /roleplay/turn`
+  - request: session config, prior turn history, latest recorded audio
+  - response: user transcript, assistant text, assistant audio
+- `POST /roleplay/end`
+  - request: session config and full turn history
+  - response: transcript, overview, wins, drills, next step
+
+## Environment
+
+Set the mobile app backend URL in [shadow-frontend/.env](/Users/thegoat/Desktop/senior_project/SeniorProject/shadow-frontend/.env):
+
+```env
+EXPO_PUBLIC_API_BASE_URL=https://your-backend.example.com
+```
+
+Restart Expo after changing env values:
+
+```bash
+cd shadow-frontend
+npx expo start -c
+```
+
+## Notes
+
+- AI voice playback is required for a turn to count as successful.
+- Saved sessions store config, transcript history, and summary only.
+- In-progress sessions are not persisted in v1.
+
+## Reference
+
+See [NEWcore-diagrams.md](/Users/thegoat/Desktop/senior_project/SeniorProject/shadow-frontend/docs/NEWcore-diagrams.md) for the current architecture diagrams.
