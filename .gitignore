@@ -44,4 +44,5 @@ yarn-error.*
 shadow-frontend/ios/
 shadow-frontend/android/
 
-shadow-frontend/google-service-account.json
+shadow-frontend/service-account.json
+shadow-backend/service-account.json
