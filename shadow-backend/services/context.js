@@ -17,7 +17,11 @@ const PDF_EXTENSIONS = new Set([".pdf"]);
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
 
 function normalizeWhitespace(text) {
-  return text.replace(/\r/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]+/g, " ").trim();
+  return text
+    .replace(/\r/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
 }
 
 function buildPromptText(extractedText, _kind) {
@@ -48,7 +52,9 @@ async function extractAttachmentText(filePath, mimeType, fileName) {
     return trimExtractedText(parsed.text || "");
   }
 
-  throw new Error("Unsupported file type. Upload a PDF, TXT, or Markdown file.");
+  throw new Error(
+    "Unsupported file type. Upload a PDF, TXT, or Markdown file."
+  );
 }
 
 function validateAttachmentKind(kind) {
