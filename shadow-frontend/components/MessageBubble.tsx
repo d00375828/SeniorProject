@@ -7,29 +7,51 @@ import { Text, View } from "react-native";
 export default function MessageBubble({ item }: { item: SessionTurn }) {
   const { colors } = useTheme();
   const mine = item.role === "user";
+  const label = mine ? "You" : "AI";
 
   return (
     <View
       style={{
-        marginVertical: 6,
+        marginVertical: 7,
         alignSelf: mine ? "flex-end" : "flex-start",
-        maxWidth: "80%",
+        maxWidth: "84%",
       }}
     >
       <View
         style={{
           backgroundColor: mine ? colors.accent : colors.box,
           borderWidth: mine ? 0 : 1,
-          borderColor: colors.border,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          borderRadius: 14,
-          borderBottomRightRadius: mine ? 4 : 14,
-          borderBottomLeftRadius: mine ? 14 : 4,
+          borderColor: mine ? "transparent" : colors.border,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          borderRadius: 18,
+          borderBottomRightRadius: mine ? 6 : 18,
+          borderBottomLeftRadius: mine ? 18 : 6,
+          shadowColor: mine ? colors.accent : "#000",
+          shadowOpacity: mine ? 0.14 : 0.12,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 2,
         }}
       >
         <Text
-          style={{ color: mine ? colors.onAccent : colors.fg, lineHeight: 20 }}
+          style={{
+            color: mine ? colors.onAccent : colors.muted,
+            fontSize: 11,
+            fontWeight: "800",
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+            marginBottom: 6,
+          }}
+        >
+          {label}
+        </Text>
+        <Text
+          style={{
+            color: mine ? colors.onAccent : colors.fg,
+            lineHeight: 21,
+            fontSize: 15,
+          }}
         >
           {item.text}
         </Text>

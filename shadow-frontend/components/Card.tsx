@@ -1,7 +1,12 @@
 // components/Card.tsx
 import { useTheme } from "@/context";
 import React from "react";
-import { StyleProp, View, ViewStyle } from "react-native";
+import {
+  Platform,
+  StyleProp,
+  View,
+  ViewStyle,
+} from "react-native";
 
 type Props = {
   children: React.ReactNode;
@@ -19,8 +24,8 @@ export default function Card({
   style,
   bg,
   border,
-  radius = 12,
-  padding = 12,
+  radius = 16,
+  padding = 14,
   borderWidth = 1,
 }: Props) {
   const { colors } = useTheme();
@@ -36,6 +41,11 @@ export default function Card({
           padding,
           borderWidth,
           borderColor,
+          shadowColor: "#000",
+          shadowOpacity: Platform.OS === "ios" ? 0.16 : 0,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: Platform.OS === "android" ? 3 : 0,
         },
         style,
       ]}
