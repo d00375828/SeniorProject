@@ -1,7 +1,14 @@
 import * as DocumentPicker from "expo-document-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import AppButton from "@/components/AppButton";
 import BackButton from "@/components/BackButton";
@@ -40,21 +47,14 @@ const scenarioGlow = {
   "q-and-a-pressure": "rgba(242, 193, 78, 0.18)",
 } as const;
 
-const fieldChips = {
-  userRole: ["Presenter", "Candidate", "Speaker", "Leader"],
-  objective: [
-    "Open clearly and keep steady pacing",
-    "Answer with structure and specific examples",
-    "Stay calm, empathic, and direct",
-    "Recover quickly from pressure",
-  ],
-  partnerStyle: [
-    "Supportive but attentive audience",
-    "Professional interviewer with follow-ups",
-    "Emotionally charged but open to dialogue",
-    "Curious but challenging questioner",
-  ],
-} as const;
+type FieldKey = "userRole" | "objective" | "partnerStyle";
+
+const customOption = "custom";
+
+type SelectOption = {
+  label: string;
+  value: string;
+};
 
 function hasSupportedExtension(fileName: string) {
   const lower = fileName.toLowerCase();
@@ -82,11 +82,16 @@ export default function SetupScreen() {
   const [partnerStyle, setPartnerStyle] = useState(
     scenario?.defaultConfig.partnerStyle ?? ""
   );
+  const [dropdownOpen, setDropdownOpen] = useState<FieldKey | null>(null);
+  const [customField, setCustomField] = useState<FieldKey | null>(null);
   const [selectedAttachmentKind, setSelectedAttachmentKind] =
     useState<AttachmentKind>("slides");
   const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const userRoleInputRef = useRef<TextInput>(null);
+  const objectiveInputRef = useRef<TextInput>(null);
+  const partnerStyleInputRef = useRef<TextInput>(null);
 
   const featuredAccent = scenario
     ? scenarioAccent[scenario.id as keyof typeof scenarioAccent] ??
@@ -96,6 +101,259 @@ export default function SetupScreen() {
     scenario && scenarioGlow[scenario.id as keyof typeof scenarioGlow]
       ? scenarioGlow[scenario.id as keyof typeof scenarioGlow]
       : "rgba(37, 184, 166, 0.18)";
+
+  const fieldOptions: Record<FieldKey, SelectOption[]> = {
+    userRole: [
+      { label: "Speaker", value: "Speaker" },
+      { label: "Presenter", value: "Presenter" },
+      { label: "Leader", value: "Leader" },
+      { label: "Candidate", value: "Candidate" },
+      { label: "Custom", value: customOption },
+    ],
+    objective: [
+      {
+        label: "Open clearly and keep steady pacing",
+        value: "Open clearly and keep steady pacing",
+      },
+      {
+        label: "Answer with structure and specific examples",
+        value: "Answer with structure and specific examples",
+      },
+      {
+        label: "Stay calm, empathic, and direct",
+        value: "Stay calm, empathic, and direct",
+      },
+      {
+        label: "Recover quickly from pressure",
+        value: "Recover quickly from pressure",
+      },
+      { label: "Custom", value: customOption },
+    ],
+    partnerStyle: [
+      {
+        label: "Supportive but attentive audience",
+        value: "Supportive but attentive audience",
+      },
+      {
+        label: "Professional interviewer with follow-ups",
+        value: "Professional interviewer with follow-ups",
+      },
+      {
+        label: "Emotionally charged but open to dialogue",
+        value: "Emotionally charged but open to dialogue",
+      },
+      {
+        label: "Curious but challenging questioner",
+        value: "Curious but challenging questioner",
+      },
+      { label: "Custom", value: customOption },
+    ],
+  };
+
+  function getFieldValue(field: FieldKey) {
+    switch (field) {
+      case "userRole":
+        return userRole;
+      case "objective":
+        return objective;
+      case "partnerStyle":
+        return partnerStyle;
+    }
+  }
+
+  function setFieldValue(field: FieldKey, value: string) {
+    switch (field) {
+      case "userRole":
+        setUserRole(value);
+        return;
+      case "objective":
+        setObjective(value);
+        return;
+      case "partnerStyle":
+        setPartnerStyle(value);
+        return;
+    }
+  }
+
+  function getFieldPlaceholder(field: FieldKey) {
+    switch (field) {
+      case "userRole":
+        return "Presenter";
+      case "objective":
+        return "Uncover pains and secure a next step";
+      case "partnerStyle":
+        return "Supportive but attentive audience";
+    }
+  }
+
+  function getFieldLabel(field: FieldKey) {
+    switch (field) {
+      case "userRole":
+        return "Your role";
+      case "objective":
+        return "Objective";
+      case "partnerStyle":
+        return "Audience or partner style";
+    }
+  }
+
+  function getInputRef(field: FieldKey) {
+    switch (field) {
+      case "userRole":
+        return userRoleInputRef;
+      case "objective":
+        return objectiveInputRef;
+      case "partnerStyle":
+        return partnerStyleInputRef;
+    }
+  }
+
+  function openCustomField(field: FieldKey) {
+    setFieldValue(field, "");
+    setCustomField(field);
+    setDropdownOpen(null);
+    requestAnimationFrame(() => {
+      getInputRef(field).current?.focus();
+    });
+  }
+
+  function renderField(field: FieldKey) {
+    const isOpen = dropdownOpen === field;
+    const isCustom = customField === field;
+    const value = getFieldValue(field);
+    const label = getFieldLabel(field);
+    const placeholder = getFieldPlaceholder(field);
+    const inputRef = getInputRef(field);
+    const options = fieldOptions[field];
+    const summaryText = value.trim() || (isCustom ? "Custom" : placeholder);
+
+    return (
+      <View style={{ gap: 8 }}>
+        <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}>
+          {label}
+        </Text>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: isOpen || isCustom ? featuredAccent : colors.border,
+            borderRadius: 14,
+            backgroundColor: colors.box,
+            overflow: "hidden",
+          }}
+        >
+          {isCustom ? (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+              }}
+            >
+              <TextInput
+                ref={inputRef}
+                value={value}
+                onChangeText={(text) => setFieldValue(field, text)}
+                placeholder=""
+                placeholderTextColor={colors.muted}
+                autoFocus
+                style={{
+                  flex: 1,
+                  color: colors.fg,
+                  fontWeight: "700",
+                  padding: 0,
+                }}
+              />
+              <Pressable
+                onPress={() => setDropdownOpen(isOpen ? null : field)}
+                style={{ paddingLeft: 12, paddingVertical: 2 }}
+              >
+                <Text style={{ color: featuredAccent, fontWeight: "800" }}>
+                  {isOpen ? "▴" : "▾"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => setDropdownOpen(isOpen ? null : field)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: value.trim() ? colors.fg : colors.muted,
+                  fontWeight: "700",
+                  flex: 1,
+                  paddingRight: 12,
+                }}
+                numberOfLines={1}
+              >
+                {summaryText}
+              </Text>
+              <Text style={{ color: featuredAccent, fontWeight: "800" }}>
+                {isOpen ? "▴" : "▾"}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        {isOpen ? (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 14,
+              backgroundColor: colors.card,
+              padding: 10,
+              gap: 8,
+            }}
+          >
+            {options.map((option) => {
+              const selected =
+                option.value !== customOption && option.value === value;
+              return (
+                <Pressable
+                  key={option.label}
+                  onPress={() => {
+                    setDropdownOpen(null);
+                    if (option.value === customOption) {
+                      openCustomField(field);
+                      return;
+                    }
+                    setCustomField(null);
+                    setFieldValue(field, option.value);
+                  }}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: selected ? featuredAccent : colors.border,
+                    borderRadius: 12,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    backgroundColor: selected ? featuredGlow : colors.box,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: selected ? featuredAccent : colors.fg,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+      </View>
+    );
+  }
 
   const preview = useMemo(() => {
     const resolvedUserRole =
@@ -202,539 +460,362 @@ export default function SetupScreen() {
   }
 
   return (
-    <Screen backgroundColor={colors.bg} style={{ padding: 16, gap: 16 }}>
-      <PageHeader title="Setup" left={<BackButton />} />
+    <Screen backgroundColor={colors.bg} scroll={false}>
+      <View style={{ flex: 1, padding: 16, gap: 16 }}>
+        <PageHeader title="Setup" left={<BackButton />} />
 
-      <Card
-        bg={colors.card}
-        border={colors.border}
-        style={{
-          gap: 14,
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        <View
-          style={{
-            position: "absolute",
-            top: -48,
-            right: -28,
-            width: 160,
-            height: 160,
-            borderRadius: 999,
-            backgroundColor: featuredGlow,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            left: -28,
-            bottom: -34,
-            width: 120,
-            height: 120,
-            borderRadius: 999,
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        />
-
-        <View style={{ gap: 10 }}>
-          <Text
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ gap: 16, paddingBottom: 16 }}
+        >
+          <Card
+            bg={colors.card}
+            border={colors.border}
             style={{
-              color: colors.muted,
-              fontSize: 12,
-              fontWeight: "800",
-              letterSpacing: 0.8,
-              textTransform: "uppercase",
+              gap: 14,
+              overflow: "hidden",
+              position: "relative",
             }}
           >
-            Scenario setup
-          </Text>
-          <Text style={{ color: colors.fg, fontSize: 26, fontWeight: "900" }}>
-            {scenario.title}
-          </Text>
-          <Text style={{ color: colors.muted, lineHeight: 22 }}>
-            {scenario.description}
-          </Text>
-        </View>
-      </Card>
+            <View
+              style={{
+                position: "absolute",
+                top: -48,
+                right: -28,
+                width: 160,
+                height: 160,
+                borderRadius: 999,
+                backgroundColor: featuredGlow,
+              }}
+            />
+            <View
+              style={{
+                position: "absolute",
+                left: -28,
+                bottom: -34,
+                width: 120,
+                height: 120,
+                borderRadius: 999,
+                backgroundColor: "rgba(255,255,255,0.04)",
+              }}
+            />
 
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
-          Session configuration
-        </Text>
-        <Text style={{ color: colors.muted, lineHeight: 21 }}>
-          Start with the defaults, or tap a suggestion to move faster.
-        </Text>
-
-        <View style={{ gap: 8 }}>
-          <Text
-            style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}
-          >
-            Quick presets
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {[
-              {
-                label: "Use defaults",
-                action: () => {
-                  setUserRole(scenario.defaultConfig.userRole);
-                  setObjective(scenario.defaultConfig.objective);
-                  setPartnerStyle(scenario.defaultConfig.partnerStyle);
-                },
-              },
-              {
-                label: "More concise",
-                action: () => {
-                  setObjective(
-                    "Answer with structure, brevity, and a clear point"
-                  );
-                  setPartnerStyle("Direct but fair evaluator");
-                },
-              },
-              {
-                label: "More pressure",
-                action: () => {
-                  setObjective(
-                    "Stay calm and recover quickly from challenging questions"
-                  );
-                  setPartnerStyle("Curious but challenging questioner");
-                },
-              },
-            ].map((chip) => (
-              <Pressable
-                key={chip.label}
-                onPress={chip.action}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 999,
-                  backgroundColor: colors.box,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                }}
-              >
-                <Text
-                  style={{ color: colors.fg, fontSize: 12, fontWeight: "700" }}
-                >
-                  {chip.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <Text
-            style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}
-          >
-            Your role
-          </Text>
-          <TextInput
-            value={userRole}
-            onChangeText={setUserRole}
-            placeholder="Presenter"
-            placeholderTextColor={colors.muted}
-            style={{
-              color: colors.fg,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              backgroundColor: colors.box,
-            }}
-          />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {fieldChips.userRole.map((chip) => (
-              <Pressable
-                key={chip}
-                onPress={() => setUserRole(chip)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor:
-                    chip === userRole ? featuredGlow : colors.box,
-                  borderWidth: 1,
-                  borderColor:
-                    chip === userRole ? featuredAccent : colors.border,
-                }}
-              >
-                <Text
-                  style={{
-                    color: chip === userRole ? featuredAccent : colors.fg,
-                    fontSize: 12,
-                    fontWeight: "700",
-                  }}
-                >
-                  {chip}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <Text
-            style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}
-          >
-            Objective
-          </Text>
-          <TextInput
-            value={objective}
-            onChangeText={setObjective}
-            placeholder="Uncover pains and secure a next step"
-            placeholderTextColor={colors.muted}
-            multiline
-            style={{
-              color: colors.fg,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              minHeight: 84,
-              backgroundColor: colors.box,
-              textAlignVertical: "top",
-            }}
-          />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {fieldChips.objective.map((chip) => (
-              <Pressable
-                key={chip}
-                onPress={() => setObjective(chip)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor:
-                    chip === objective ? featuredGlow : colors.box,
-                  borderWidth: 1,
-                  borderColor:
-                    chip === objective ? featuredAccent : colors.border,
-                }}
-              >
-                <Text
-                  style={{
-                    color: chip === objective ? featuredAccent : colors.fg,
-                    fontSize: 12,
-                    fontWeight: "700",
-                  }}
-                >
-                  {chip}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View style={{ gap: 6 }}>
-          <Text
-            style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}
-          >
-            Audience or partner style
-          </Text>
-          <TextInput
-            value={partnerStyle}
-            onChangeText={setPartnerStyle}
-            placeholder="Supportive but attentive audience"
-            placeholderTextColor={colors.muted}
-            style={{
-              color: colors.fg,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 12,
-              backgroundColor: colors.box,
-            }}
-          />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {fieldChips.partnerStyle.map((chip) => (
-              <Pressable
-                key={chip}
-                onPress={() => setPartnerStyle(chip)}
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor:
-                    chip === partnerStyle ? featuredGlow : colors.box,
-                  borderWidth: 1,
-                  borderColor:
-                    chip === partnerStyle ? featuredAccent : colors.border,
-                }}
-              >
-                <Text
-                  style={{
-                    color: chip === partnerStyle ? featuredAccent : colors.fg,
-                    fontSize: 12,
-                    fontWeight: "700",
-                  }}
-                >
-                  {chip}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      </Card>
-
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
-          Preview
-        </Text>
-        <Text style={{ color: colors.muted, lineHeight: 21 }}>
-          This is your session with the current setup.
-        </Text>
-
-        <Card bg={colors.box} border={colors.border} style={{ gap: 10 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ gap: 10 }}>
               <Text
-                style={{ color: colors.fg, fontSize: 18, fontWeight: "900" }}
+                style={{
+                  color: colors.muted,
+                  fontSize: 12,
+                  fontWeight: "800",
+                  letterSpacing: 0.8,
+                  textTransform: "uppercase",
+                }}
               >
-                {preview.resolvedUserRole}
+                Scenario setup
+              </Text>
+              <Text
+                style={{ color: colors.fg, fontSize: 26, fontWeight: "900" }}
+              >
+                {scenario.title}
+              </Text>
+              <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                {scenario.description}
               </Text>
             </View>
-            <View style={{ alignItems: "flex-end", gap: 4, flex: 1 }}>
+          </Card>
+
+          <Card style={{ gap: 12 }}>
+            <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
+              Session configuration
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 21 }}>
+              Start with the defaults, or customize to fit you!
+            </Text>
+
+            {renderField("userRole")}
+            {renderField("objective")}
+            {renderField("partnerStyle")}
+          </Card>
+
+          <Card style={{ gap: 12 }}>
+            <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
+              Preview
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 21 }}>
+              This is your session with the current setup.
+            </Text>
+
+            <Card bg={colors.box} border={colors.border} style={{ gap: 10 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text
+                    style={{
+                      color: colors.fg,
+                      fontSize: 18,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {preview.resolvedUserRole}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end", gap: 4, flex: 1 }}>
+                  <Text
+                    style={{
+                      color: featuredAccent,
+                      fontSize: 18,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {preview.readinessLabel}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ gap: 6 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 15,
+                    fontWeight: "700",
+                  }}
+                >
+                  Objective
+                </Text>
+                <Text style={{ color: colors.fg, lineHeight: 21 }}>
+                  {preview.resolvedObjective}
+                </Text>
+              </View>
+
+              <View style={{ gap: 6 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 15,
+                    fontWeight: "700",
+                  }}
+                >
+                  Partner style
+                </Text>
+                <Text style={{ color: colors.fg, lineHeight: 21 }}>
+                  {preview.resolvedPartnerStyle}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: colors.border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.fg,
+                      fontSize: 12,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {preview.filledFields}/3 fields set
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </Card>
+
+          <Card style={{ gap: 12 }}>
+            <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
+              Upload materials - Optional
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 21 }}>
+              Upload a script, rubric, or notes. The AI will use it to guide
+              your roleplay.
+            </Text>
+
+            <Card bg={colors.box} border={colors.border} style={{ gap: 8 }}>
               <Text
                 style={{
                   color: featuredAccent,
-                  fontSize: 18,
-                  fontWeight: "900",
+                  fontSize: 12,
+                  fontWeight: "800",
                 }}
               >
-                {preview.readinessLabel}
+                Supported files
               </Text>
+              <Text style={{ color: colors.fg, lineHeight: 21 }}>
+                PDF, TXT, and Markdown. Maximum of 3 files per session, up to 10
+                MB each.
+              </Text>
+            </Card>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {ATTACHMENT_KIND_OPTIONS.map((option) => {
+                const selected = selectedAttachmentKind === option.kind;
+                return (
+                  <Pressable
+                    key={option.kind}
+                    onPress={() => setSelectedAttachmentKind(option.kind)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: selected ? featuredAccent : colors.border,
+                      borderRadius: 999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      backgroundColor: selected ? featuredGlow : colors.box,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: selected ? featuredAccent : colors.fg,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
-          </View>
 
-          <View style={{ gap: 6 }}>
-            <Text
-              style={{ color: colors.muted, fontSize: 15, fontWeight: "700" }}
-            >
-              Objective
-            </Text>
-            <Text style={{ color: colors.fg, lineHeight: 21 }}>
-              {preview.resolvedObjective}
-            </Text>
-          </View>
+            <AppButton
+              title={
+                uploadBusy ? "Uploading..." : `Upload ${selectedAttachmentKind}`
+              }
+              color={featuredAccent}
+              fg={colors.onAccent}
+              disabled={uploadBusy || attachments.length >= MAX_ATTACHMENTS}
+              onPress={onPickDocument}
+            />
 
-          <View style={{ gap: 6 }}>
-            <Text
-              style={{ color: colors.muted, fontSize: 15, fontWeight: "700" }}
-            >
-              Partner style
+            <Text style={{ color: colors.muted, fontSize: 12 }}>
+              Up to 3 files per session.
             </Text>
-            <Text style={{ color: colors.fg, lineHeight: 21 }}>
-              {preview.resolvedPartnerStyle}
-            </Text>
-          </View>
 
+            {uploadError ? (
+              <Text style={{ color: "#ffb3b3" }}>{uploadError}</Text>
+            ) : null}
+
+            {attachments.length ? (
+              <View style={{ gap: 10 }}>
+                {attachments.map((attachment) => (
+                  <Card
+                    key={attachment.id}
+                    bg={colors.box}
+                    border={colors.border}
+                    style={{ gap: 8 }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ color: colors.fg, fontWeight: "800" }}>
+                          {attachment.name}
+                        </Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>
+                          {attachment.kind} | {attachment.mimeType}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => removeAttachment(attachment.id)}
+                      >
+                        <Text
+                          style={{ color: colors.accent, fontWeight: "700" }}
+                        >
+                          Remove
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                      {attachment.promptText.slice(0, 180)}
+                      {attachment.promptText.length > 180 ? "..." : ""}
+                    </Text>
+                  </Card>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ color: colors.muted, lineHeight: 21 }}>
+                No supporting materials added yet.
+              </Text>
+            )}
+          </Card>
+        </ScrollView>
+
+        <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
             <View
               style={{
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 999,
-                backgroundColor: colors.border,
+                backgroundColor: featuredGlow,
+              }}
+            >
+              <Text
+                style={{
+                  color: featuredAccent,
+                  fontSize: 12,
+                  fontWeight: "800",
+                }}
+              >
+                {preview.readinessLabel}
+              </Text>
+            </View>
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: colors.box,
               }}
             >
               <Text
                 style={{ color: colors.fg, fontSize: 12, fontWeight: "700" }}
               >
-                {preview.filledFields}/3 fields set
+                {attachments.length} attached
               </Text>
             </View>
           </View>
-        </Card>
-      </Card>
-
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
-          Upload materials - Optional
-        </Text>
-        <Text style={{ color: colors.muted, lineHeight: 21 }}>
-          Upload a script, rubric, or notes. The AI will extract the text and
-          use it to guide your roleplay.
-        </Text>
-
-        <Card bg={colors.box} border={colors.border} style={{ gap: 8 }}>
-          <Text
-            style={{ color: featuredAccent, fontSize: 12, fontWeight: "800" }}
-          >
-            Supported files
-          </Text>
-          <Text style={{ color: colors.fg, lineHeight: 21 }}>
-            PDF, TXT, and Markdown. Maximum of 3 files per session, up to 10 MB
-            each.
-          </Text>
-          <Text style={{ color: colors.muted, lineHeight: 20 }}>
-            Best results: upload the actual rubric or prompt notes you want the
-            AI to follow.
-          </Text>
-        </Card>
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {ATTACHMENT_KIND_OPTIONS.map((option) => {
-            const selected = selectedAttachmentKind === option.kind;
-            return (
-              <Pressable
-                key={option.kind}
-                onPress={() => setSelectedAttachmentKind(option.kind)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: selected ? featuredAccent : colors.border,
-                  borderRadius: 999,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  backgroundColor: selected ? featuredGlow : colors.box,
-                }}
-              >
-                <Text
-                  style={{
-                    color: selected ? featuredAccent : colors.fg,
-                    fontWeight: "700",
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <AppButton
-          title={
-            uploadBusy ? "Uploading..." : `Upload ${selectedAttachmentKind}`
-          }
-          color={featuredAccent}
-          fg={colors.onAccent}
-          disabled={uploadBusy || attachments.length >= MAX_ATTACHMENTS}
-          onPress={onPickDocument}
-        />
-
-        <Text style={{ color: colors.muted, fontSize: 12 }}>
-          Up to 3 files per session.
-        </Text>
-
-        {uploadError ? (
-          <Text style={{ color: "#ffb3b3" }}>{uploadError}</Text>
-        ) : null}
-
-        {attachments.length ? (
-          <View style={{ gap: 10 }}>
-            {attachments.map((attachment) => (
-              <Card
-                key={attachment.id}
-                bg={colors.box}
-                border={colors.border}
-                style={{ gap: 8 }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 12,
-                  }}
-                >
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: colors.fg, fontWeight: "800" }}>
-                      {attachment.name}
-                    </Text>
-                    <Text style={{ color: colors.muted, fontSize: 12 }}>
-                      {attachment.kind} | {attachment.mimeType}
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => removeAttachment(attachment.id)}>
-                    <Text style={{ color: colors.accent, fontWeight: "700" }}>
-                      Remove
-                    </Text>
-                  </Pressable>
-                </View>
-                <Text style={{ color: colors.muted, lineHeight: 20 }}>
-                  {attachment.promptText.slice(0, 180)}
-                  {attachment.promptText.length > 180 ? "..." : ""}
-                </Text>
-              </Card>
-            ))}
-          </View>
-        ) : (
-          <Text style={{ color: colors.muted, lineHeight: 21 }}>
-            No supporting materials added yet.
-          </Text>
-        )}
-      </Card>
-
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: colors.muted, lineHeight: 21 }}>
-          After each turn, you’ll see your transcript, get an AI reply, and hear
-          the response.
-        </Text>
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              backgroundColor: featuredGlow,
+          <AppButton
+            title="Start Roleplay"
+            color={featuredAccent}
+            fg={colors.onAccent}
+            onPress={() => {
+              startSession({
+                scenarioId: scenario.id,
+                userRole: userRole.trim() || scenario.defaultConfig.userRole,
+                objective: objective.trim() || scenario.defaultConfig.objective,
+                partnerStyle:
+                  partnerStyle.trim() || scenario.defaultConfig.partnerStyle,
+                attachments,
+              });
+              router.push("/session" as any);
             }}
-          >
+          />
+          <Pressable onPress={() => router.push("/history" as any)}>
             <Text
-              style={{ color: featuredAccent, fontSize: 12, fontWeight: "800" }}
+              style={{
+                color: colors.accent,
+                fontWeight: "700",
+                textAlign: "center",
+              }}
             >
-              {preview.readinessLabel}
+              View saved sessions
             </Text>
-          </View>
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              backgroundColor: colors.box,
-            }}
-          >
-            <Text style={{ color: colors.fg, fontSize: 12, fontWeight: "700" }}>
-              {attachments.length} attached
-            </Text>
-          </View>
-        </View>
-        <AppButton
-          title="Start Roleplay"
-          color={featuredAccent}
-          fg={colors.onAccent}
-          onPress={() => {
-            startSession({
-              scenarioId: scenario.id,
-              userRole: userRole.trim() || scenario.defaultConfig.userRole,
-              objective: objective.trim() || scenario.defaultConfig.objective,
-              partnerStyle:
-                partnerStyle.trim() || scenario.defaultConfig.partnerStyle,
-              attachments,
-            });
-            router.push("/session" as any);
-          }}
-        />
-        <Pressable onPress={() => router.push("/history" as any)}>
-          <Text
-            style={{
-              color: colors.accent,
-              fontWeight: "700",
-              textAlign: "center",
-            }}
-          >
-            View saved sessions
-          </Text>
-        </Pressable>
-      </Card>
+          </Pressable>
+        </Card>
+      </View>
     </Screen>
   );
 }
