@@ -752,45 +752,16 @@ export default function SetupScreen() {
           </Card>
         </ScrollView>
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: featuredGlow,
-              }}
-            >
-              <Text
-                style={{
-                  color: featuredAccent,
-                  fontSize: 12,
-                  fontWeight: "800",
-                }}
-              >
-                {preview.readinessLabel}
-              </Text>
-            </View>
-            <View
-              style={{
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 999,
-                backgroundColor: colors.box,
-              }}
-            >
-              <Text
-                style={{ color: colors.fg, fontSize: 12, fontWeight: "700" }}
-              >
-                {attachments.length} attached
-              </Text>
-            </View>
-          </View>
+        <Card style={{ gap: 14, padding: 18 }}>
           <AppButton
             title="Start Roleplay"
             color={featuredAccent}
             fg={colors.onAccent}
+            style={{
+              paddingVertical: 15,
+              paddingHorizontal: 20,
+              borderRadius: 14,
+            }}
             onPress={() => {
               startSession({
                 scenarioId: scenario.id,
@@ -803,17 +774,6 @@ export default function SetupScreen() {
               router.push("/session" as any);
             }}
           />
-          <Pressable onPress={() => router.push("/history" as any)}>
-            <Text
-              style={{
-                color: colors.accent,
-                fontWeight: "700",
-                textAlign: "center",
-              }}
-            >
-              View saved sessions
-            </Text>
-          </Pressable>
         </Card>
       </View>
     </Screen>

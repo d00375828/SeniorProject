@@ -10,11 +10,19 @@ import Card from "@/components/Card";
 import MessageBubble from "@/components/MessageBubble";
 import PageHeader from "@/components/PageHeader";
 import Screen from "@/components/Screen";
-import { useSession, useTheme } from "@/context";
+import { ThemeProvider, useSession, useTheme } from "@/context";
+import type { ActiveSession } from "@/context";
 import { useRecorder } from "@/hooks/useRecorder";
 
+type SessionActionHandlers = {
+  submitTurn: (audioUri: string) => Promise<unknown>;
+  retryLastTurn: () => Promise<unknown>;
+  endSession: () => Promise<unknown>;
+  setPlaybackState: (isPlaying: boolean) => void;
+  failLatestPlayback: (message: string) => void;
+};
+
 export default function SessionScreen() {
-  const { colors } = useTheme();
   const {
     activeSession,
     submitTurn,
@@ -23,9 +31,6 @@ export default function SessionScreen() {
     setPlaybackState,
     failLatestPlayback,
   } = useSession();
-  const { isRecording, seconds, pulse, start, stop, reset } = useRecorder();
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
-  const [localBusy, setLocalBusy] = useState(false);
 
   useEffect(() => {
     if (!activeSession) {
@@ -33,11 +38,38 @@ export default function SessionScreen() {
     }
   }, [activeSession]);
 
-  const messages = useMemo(() => activeSession?.turns ?? [], [activeSession?.turns]);
-
   if (!activeSession) {
     return null;
   }
+
+  return (
+    <ThemeProvider scenarioId={activeSession.scenario.id as any}>
+      <SessionScreenContent
+        activeSession={activeSession}
+        submitTurn={submitTurn}
+        retryLastTurn={retryLastTurn}
+        endSession={endSession}
+        setPlaybackState={setPlaybackState}
+        failLatestPlayback={failLatestPlayback}
+      />
+    </ThemeProvider>
+  );
+}
+
+function SessionScreenContent({
+  activeSession,
+  submitTurn,
+  retryLastTurn,
+  endSession,
+  setPlaybackState,
+  failLatestPlayback,
+}: { activeSession: ActiveSession } & SessionActionHandlers) {
+  const { colors } = useTheme();
+  const { isRecording, seconds, pulse, start, stop, reset } = useRecorder();
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [localBusy, setLocalBusy] = useState(false);
+
+  const messages = useMemo(() => activeSession.turns ?? [], [activeSession.turns]);
 
   const clock = `${Math.floor(seconds / 60)
     .toString()
@@ -149,7 +181,9 @@ export default function SessionScreen() {
                   justifyContent: "center",
                   backgroundColor: isRecording ? "#ff5454" : colors.accent,
                   opacity:
-                    isBusy || activeSession.status === "playing" || hasTurnError ? 0.55 : 1,
+                    isBusy || activeSession.status === "playing" || hasTurnError
+                      ? 0.55
+                      : 1,
                 }}
               >
                 <Ionicons
@@ -189,10 +223,14 @@ export default function SessionScreen() {
                     Failed turn preview
                   </Text>
                   <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
-                    You: {activeSession.failedTurnPreview.userTranscript || "Transcript unavailable"}
+                    You:{" "}
+                    {activeSession.failedTurnPreview.userTranscript ||
+                      "Transcript unavailable"}
                   </Text>
                   <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
-                    AI: {activeSession.failedTurnPreview.assistantText || "Reply unavailable"}
+                    AI:{" "}
+                    {activeSession.failedTurnPreview.assistantText ||
+                      "Reply unavailable"}
                   </Text>
                 </Card>
               ) : null}
@@ -232,10 +270,13 @@ export default function SessionScreen() {
             Conversation
           </Text>
           {messages.length ? (
-            messages.map((message) => <MessageBubble key={message.id} item={message} />)
+            messages.map((message) => (
+              <MessageBubble key={message.id} item={message} />
+            ))
           ) : (
             <Text style={{ color: colors.muted, lineHeight: 22 }}>
-              No turns yet. Record your opening message to start the practice session.
+              No turns yet. Record your opening message to start the practice
+              session.
             </Text>
           )}
         </Card>

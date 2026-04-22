@@ -198,6 +198,31 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </View>
+
+      <Card style={{ gap: 10 }}>
+        <Text style={{ color: colors.fg, fontSize: 20, fontWeight: "800" }}>
+          Saved sessions
+        </Text>
+        <Text style={{ color: colors.muted, lineHeight: 21 }}>
+          Review completed sessions, revisit coaching notes, and compare your
+          earlier runs.
+        </Text>
+        <Pressable
+          onPress={() => router.push("/history" as any)}
+          style={({ pressed }) => ({
+            backgroundColor: colors.accent,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            alignItems: "center",
+            opacity: pressed ? 0.86 : 1,
+          })}
+        >
+          <Text style={{ color: colors.onAccent, fontWeight: "800" }}>
+            View saved sessions
+          </Text>
+        </Pressable>
+      </Card>
     </Screen>
   );
 }

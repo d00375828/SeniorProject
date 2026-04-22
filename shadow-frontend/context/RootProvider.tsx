@@ -4,8 +4,8 @@ import { ThemeProvider } from "./theme";
 
 export function RootProvider({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider>
-      <SessionProvider>{children}</SessionProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider>{children}</ThemeProvider>
+    </SessionProvider>
   );
 }
