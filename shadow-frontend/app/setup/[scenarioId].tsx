@@ -752,7 +752,7 @@ export default function SetupScreen() {
           </Card>
         </ScrollView>
 
-        <Card style={{ gap: 14, padding: 18 }}>
+        <View style={{ paddingVertical: 4 }}>
           <AppButton
             title="Start Roleplay"
             color={featuredAccent}
@@ -774,7 +774,7 @@ export default function SetupScreen() {
               router.push("/session" as any);
             }}
           />
-        </Card>
+        </View>
       </View>
     </Screen>
   );
