@@ -103,60 +103,92 @@ export default function SummaryScreen() {
       )}`
     : currentSummary.overview;
 
+  const feedbackMetrics = [
+    { label: "Estimated confidence", value: analysis.confidence },
+    { label: "Estimated clarity", value: analysis.clarity },
+    { label: "Estimated concision", value: analysis.concision },
+  ];
+
   return (
     <Screen backgroundColor={colors.bg} style={{ padding: 16, gap: 16 }}>
       <PageHeader title="Summary" left={<BackButton />} />
 
-      <Card style={{ gap: 14 }}>
-        <View style={{ gap: 6 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>
+      <Card style={{ gap: 16 }}>
+        <View style={{ gap: 8 }}>
+          <Text
+            style={{
+              color: colors.muted,
+              fontSize: 12,
+              fontWeight: "800",
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+            }}
+          >
             Session Review
           </Text>
           <Text style={{ color: colors.fg, fontSize: 26, fontWeight: "900" }}>
             {activeSession.scenario.title}
           </Text>
-          <Text style={{ color: colors.muted, lineHeight: 22 }}>
+          <Text style={{ color: colors.muted, lineHeight: 22, fontSize: 15 }}>
             {currentSummary.overview}
           </Text>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          {[
-            { label: "Confidence", value: analysis.confidence },
-            { label: "Clarity", value: analysis.clarity },
-            { label: "Concision", value: analysis.concision },
-          ].map((item) => (
-            <View key={item.label} style={{ flex: 1, gap: 8 }}>
-              <Card bg={colors.box} border={colors.border} style={{ gap: 10 }}>
-                <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "800" }}>
-                  {item.label}
-                </Text>
-                <Text style={{ color: colors.fg, fontSize: 24, fontWeight: "900" }}>
-                  {item.value}%
-                </Text>
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700" }}>
-                  {scoreLabel(item.value)}
-                </Text>
-              </Card>
-              <View
-                style={{
-                  height: 6,
-                  borderRadius: 999,
-                  backgroundColor: colors.border,
-                  overflow: "hidden",
-                }}
-              >
+        <View style={{ gap: 10 }}>
+          <View style={{ gap: 4 }}>
+            <Text
+              style={{
+                color: colors.fg,
+                fontSize: 13,
+                fontWeight: "800",
+                letterSpacing: 0.4,
+              }}
+            >
+              Feedback snapshot
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 18 }}>
+              Quick estimates based on the turn pattern and transcript shape, not a final score.
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {feedbackMetrics.map((item) => (
+              <View key={item.label} style={{ flex: 1, gap: 8 }}>
+                <Card
+                  bg={colors.box}
+                  border={colors.border}
+                  style={{ gap: 8, padding: 12 }}
+                >
+                  <Text style={{ color: colors.muted, fontSize: 11, fontWeight: "800" }}>
+                    {item.label}
+                  </Text>
+                  <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "900" }}>
+                    {item.value}%
+                  </Text>
+                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700" }}>
+                    {scoreLabel(item.value)}
+                  </Text>
+                </Card>
                 <View
                   style={{
-                    width: `${item.value}%`,
-                    height: "100%",
+                    height: 5,
                     borderRadius: 999,
-                    backgroundColor: colors.accent,
+                    backgroundColor: colors.border,
+                    overflow: "hidden",
                   }}
-                />
+                >
+                  <View
+                    style={{
+                      width: `${item.value}%`,
+                      height: "100%",
+                      borderRadius: 999,
+                      backgroundColor: colors.accent,
+                    }}
+                  />
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
 
         <View
