@@ -142,153 +142,160 @@ function SessionScreenContent({
         }
       />
 
-      <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 24 }}>
-        <Card style={{ gap: 8 }}>
-          <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "800" }}>
-            {activeSession.scenario.title}
-          </Text>
-          <Text style={{ color: colors.muted, lineHeight: 20 }}>
-            {activeSession.config.userRole} | {activeSession.config.partnerStyle}
-          </Text>
-          <Text style={{ color: colors.muted, lineHeight: 22 }}>
-            Objective: {activeSession.config.objective}
-          </Text>
-          {activeSession.config.attachments?.length ? (
-            <Text style={{ color: colors.muted, lineHeight: 20 }}>
-              Materials loaded: {activeSession.config.attachments.length}
+      <View style={{ flex: 1, gap: 12 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ gap: 12, paddingBottom: 16 }}
+        >
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "800" }}>
+              {activeSession.scenario.title}
             </Text>
-          ) : null}
-        </Card>
+            <Text style={{ color: colors.muted, lineHeight: 20 }}>
+              {activeSession.config.userRole} | {activeSession.config.partnerStyle}
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 22 }}>
+              Objective: {activeSession.config.objective}
+            </Text>
+            {activeSession.config.attachments?.length ? (
+              <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                Materials loaded: {activeSession.config.attachments.length}
+              </Text>
+            ) : null}
+          </Card>
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ alignItems: "center", gap: 8 }}>
-            <Animated.View
-              style={{
-                transform: [{ scale: pulse }],
-                borderRadius: 999,
-                padding: 6,
-                backgroundColor: isRecording ? "#ff4d4d20" : "transparent",
-              }}
-            >
-              <Pressable
-                disabled={isBusy || activeSession.status === "playing" || hasTurnError}
-                onPress={onRecordPress}
+          <Card style={{ gap: 12 }}>
+            <View style={{ alignItems: "center", gap: 8 }}>
+              <Animated.View
                 style={{
-                  height: 128,
-                  width: 128,
+                  transform: [{ scale: pulse }],
                   borderRadius: 999,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: isRecording ? "#ff5454" : colors.accent,
-                  opacity:
-                    isBusy || activeSession.status === "playing" || hasTurnError
-                      ? 0.55
-                      : 1,
+                  padding: 6,
+                  backgroundColor: isRecording ? "#ff4d4d20" : "transparent",
                 }}
               >
-                <Ionicons
-                  name={isRecording ? "stop" : "mic"}
-                  size={34}
-                  color={isRecording ? "#120000" : colors.onAccent}
-                />
-              </Pressable>
-            </Animated.View>
-            <Text style={{ color: colors.fg, fontWeight: "800", fontSize: 18 }}>
-              {isRecording ? "Recording turn..." : "Tap to record your next turn"}
-            </Text>
-            <Text style={{ color: colors.muted }}>
-              {isRecording
-                ? `Live timer ${clock}`
-                : activeSession.status === "submitting"
-                ? "Processing turn..."
-                : activeSession.status === "playing"
-                ? "Playing AI reply..."
-                : activeSession.status === "ending"
-                ? "Building summary..."
-                : activeSession.error
-                ? "Retry the last turn before recording again"
-                : "Ready"}
-            </Text>
-          </View>
-
-          {activeSession.error ? (
-            <Card bg="#2a1616" border="#613131" style={{ gap: 10 }}>
-              <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
-                Turn issue
+                <Pressable
+                  disabled={isBusy || activeSession.status === "playing" || hasTurnError}
+                  onPress={onRecordPress}
+                  style={{
+                    height: 128,
+                    width: 128,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: isRecording ? "#ff5454" : colors.accent,
+                    opacity:
+                      isBusy || activeSession.status === "playing" || hasTurnError
+                        ? 0.55
+                        : 1,
+                  }}
+                >
+                  <Ionicons
+                    name={isRecording ? "stop" : "mic"}
+                    size={34}
+                    color={isRecording ? "#120000" : colors.onAccent}
+                  />
+                </Pressable>
+              </Animated.View>
+              <Text style={{ color: colors.fg, fontWeight: "800", fontSize: 18 }}>
+                {isRecording ? "Recording turn..." : "Tap to record your next turn"}
               </Text>
-              <Text style={{ color: "#ffd9d9" }}>{activeSession.error}</Text>
-              {activeSession.failedTurnPreview ? (
-                <Card bg="#351d1d" border="#613131" style={{ gap: 8 }}>
-                  <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
-                    Failed turn preview
-                  </Text>
-                  <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
-                    You:{" "}
-                    {activeSession.failedTurnPreview.userTranscript ||
-                      "Transcript unavailable"}
-                  </Text>
-                  <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
-                    AI:{" "}
-                    {activeSession.failedTurnPreview.assistantText ||
-                      "Reply unavailable"}
-                  </Text>
-                </Card>
-              ) : null}
-              <AppButton
-                title="Retry Last Turn"
-                onPress={onRetry}
-                color={colors.accent}
-                fg={colors.onAccent}
+              <Text style={{ color: colors.muted }}>
+                {isRecording
+                  ? `Live timer ${clock}`
+                  : activeSession.status === "submitting"
+                  ? "Processing turn..."
+                  : activeSession.status === "playing"
+                  ? "Playing AI reply..."
+                  : activeSession.status === "ending"
+                  ? "Building summary..."
+                  : activeSession.error
+                  ? "Retry the last turn before recording again"
+                  : "Ready"}
+              </Text>
+            </View>
+
+            {activeSession.error ? (
+              <Card bg="#2a1616" border="#613131" style={{ gap: 10 }}>
+                <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
+                  Turn issue
+                </Text>
+                <Text style={{ color: "#ffd9d9" }}>{activeSession.error}</Text>
+                {activeSession.failedTurnPreview ? (
+                  <Card bg="#351d1d" border="#613131" style={{ gap: 8 }}>
+                    <Text style={{ color: "#ffb3b3", fontWeight: "700" }}>
+                      Failed turn preview
+                    </Text>
+                    <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
+                      You:{" "}
+                      {activeSession.failedTurnPreview.userTranscript ||
+                        "Transcript unavailable"}
+                    </Text>
+                    <Text style={{ color: "#ffd9d9", lineHeight: 21 }}>
+                      AI:{" "}
+                      {activeSession.failedTurnPreview.assistantText ||
+                        "Reply unavailable"}
+                    </Text>
+                  </Card>
+                ) : null}
+                <AppButton
+                  title="Retry Last Turn"
+                  onPress={onRetry}
+                  color={colors.accent}
+                  fg={colors.onAccent}
+                />
+              </Card>
+            ) : null}
+
+            {activeSession.latestAssistantAudioUri ? (
+              <AssistantPlayback
+                uri={activeSession.latestAssistantAudioUri}
+                onPlaybackStart={() => setPlaybackState(true)}
+                onPlaybackEnd={() => setPlaybackState(false)}
+                onPlaybackError={(message) => {
+                  setPlaybackError(message);
+                  failLatestPlayback(
+                    message ||
+                      "Assistant audio playback failed. Retry the turn so the voice reply completes successfully."
+                  );
+                }}
               />
-            </Card>
-          ) : null}
+            ) : null}
 
-          {activeSession.latestAssistantAudioUri ? (
-            <AssistantPlayback
-              uri={activeSession.latestAssistantAudioUri}
-              onPlaybackStart={() => setPlaybackState(true)}
-              onPlaybackEnd={() => setPlaybackState(false)}
-              onPlaybackError={(message) => {
-                setPlaybackError(message);
-                failLatestPlayback(
-                  message ||
-                    "Assistant audio playback failed. Retry the turn so the voice reply completes successfully."
-                );
-              }}
-            />
-          ) : null}
+            {playbackError ? (
+              <Text style={{ color: "#ffb3b3" }}>
+                Voice playback failed. Review the preview and retry the turn.
+              </Text>
+            ) : null}
+          </Card>
 
-          {playbackError ? (
-            <Text style={{ color: "#ffb3b3" }}>
-              Voice playback failed. Review the preview and retry the turn.
+          <Card style={{ gap: 12, minHeight: 280 }}>
+            <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "700" }}>
+              Conversation
             </Text>
-          ) : null}
-        </Card>
+            {messages.length ? (
+              messages.map((message) => (
+                <MessageBubble key={message.id} item={message} />
+              ))
+            ) : (
+              <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                No turns yet. Record your opening message to start the practice
+                session.
+              </Text>
+            )}
+          </Card>
+        </ScrollView>
 
-        <Card style={{ gap: 12, minHeight: 280 }}>
-          <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "700" }}>
-            Conversation
-          </Text>
-          {messages.length ? (
-            messages.map((message) => (
-              <MessageBubble key={message.id} item={message} />
-            ))
-          ) : (
-            <Text style={{ color: colors.muted, lineHeight: 22 }}>
-              No turns yet. Record your opening message to start the practice
-              session.
-            </Text>
-          )}
-        </Card>
-
-        <AppButton
-          title="End Session"
-          color={colors.accent}
-          fg={colors.onAccent}
-          disabled={!activeSession.turns.length || isRecording || isBusy || hasTurnError}
-          onPress={onEndSession}
-        />
-      </ScrollView>
+        <View style={{ paddingTop: 4 }}>
+          <AppButton
+            title="End Session"
+            color={colors.accent}
+            fg={colors.onAccent}
+            disabled={!activeSession.turns.length || isRecording || isBusy || hasTurnError}
+            onPress={onEndSession}
+          />
+        </View>
+      </View>
     </Screen>
   );
 }

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import AppButton from "@/components/AppButton";
 import BackButton from "@/components/BackButton";
@@ -203,6 +203,25 @@ function defaultSummarySections(
         };
       }
 
+      if (section.kind === "question-review") {
+        return {
+          key: section.key,
+          kind: "question-review",
+          title: section.title,
+          items: [],
+        };
+      }
+
+      if (section.kind === "study-topics") {
+        return {
+          key: section.key,
+          kind: "study-topics",
+          title: section.title,
+          items: [],
+          proMessage: "Nothing to study up on you are already a pro!!",
+        };
+      }
+
       return {
         key: section.key,
         kind: "transcript",
@@ -234,6 +253,7 @@ export default function SummaryScreen() {
   const [expandedTranscriptKey, setExpandedTranscriptKey] = useState<string | null>(
     null
   );
+  const [expandedQuestionKeys, setExpandedQuestionKeys] = useState<string[]>([]);
 
   useEffect(() => {
     if (!activeSession || !currentSummary) {
@@ -310,10 +330,15 @@ export default function SummaryScreen() {
   const recapText = currentSummary.intro || coachTakeaway(currentSummary.wins);
 
   return (
-    <Screen backgroundColor={colors.bg} style={{ padding: 16, gap: 16 }}>
+    <Screen scroll={false} backgroundColor={colors.bg} style={{ padding: 16 }}>
       <PageHeader title="Summary" left={<BackButton />} />
 
-      <Card style={{ gap: 16 }}>
+      <View style={{ flex: 1, gap: 16 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ gap: 14, paddingTop: 16, paddingBottom: 24 }}
+        >
+          <Card style={{ gap: 16 }}>
         <View style={{ gap: 10 }}>
           <Text
             style={{
@@ -352,10 +377,10 @@ export default function SummaryScreen() {
             opacity: 0.8,
           }}
         />
-      </Card>
+          </Card>
 
-      <View style={{ gap: 14 }}>
-        {summarySections.map((section) => {
+          <View style={{ gap: 14 }}>
+            {summarySections.map((section) => {
           if (section.kind === "takeaway") {
             return (
               <Card key={section.key} style={{ gap: 10 }}>
@@ -402,15 +427,6 @@ export default function SummaryScreen() {
                         border={colors.border}
                         style={{ gap: 6, padding: 12 }}
                       >
-                        <Text
-                          style={{
-                            color: colors.accent,
-                            fontSize: 11,
-                            fontWeight: "800",
-                          }}
-                        >
-                          Bullet
-                        </Text>
                         <Text style={{ color: colors.fg, lineHeight: 22 }}>
                           {item}
                         </Text>
@@ -815,6 +831,143 @@ export default function SummaryScreen() {
             );
           }
 
+          if (section.kind === "question-review") {
+            return (
+              <Card key={section.key} style={{ gap: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                {section.items.length ? (
+                  <View style={{ gap: 10 }}>
+                    {section.items.map((item, index) => {
+                      const rowKey = `${section.key}-${index}`;
+                      const expanded = expandedQuestionKeys.includes(rowKey);
+
+                      return (
+                        <Card
+                          key={rowKey}
+                          bg={colors.box}
+                          border={colors.border}
+                          style={{ gap: 10, padding: 12 }}
+                        >
+                          <Pressable
+                            onPress={() =>
+                              setExpandedQuestionKeys((current) =>
+                                current.includes(rowKey)
+                                  ? current.filter((key) => key !== rowKey)
+                                  : [...current, rowKey]
+                              )
+                            }
+                            style={{ gap: 8 }}
+                          >
+                            <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                              {item.question}
+                            </Text>
+                            <Text
+                              style={{
+                                color: colors.accent,
+                                fontSize: 12,
+                                fontWeight: "700",
+                              }}
+                            >
+                              {expanded ? "Hide review" : "Show review"}
+                            </Text>
+                          </Pressable>
+
+                          {expanded ? (
+                            <View style={{ gap: 8 }}>
+                              <Text
+                                style={{
+                                  color: colors.muted,
+                                  fontSize: 12,
+                                  fontWeight: "800",
+                                }}
+                              >
+                                Answer level
+                              </Text>
+                              <Text
+                                style={{
+                                  color: colors.fg,
+                                  fontSize: 18,
+                                  fontWeight: "800",
+                                }}
+                              >
+                                {item.level}
+                              </Text>
+                              <Text style={{ color: colors.muted, lineHeight: 21 }}>
+                                {item.feedback}
+                              </Text>
+                            </View>
+                          ) : null}
+                        </Card>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                    No question review was generated.
+                  </Text>
+                )}
+              </Card>
+            );
+          }
+
+          if (section.kind === "study-topics") {
+            return (
+              <Card key={section.key} style={{ gap: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                {section.items.length ? (
+                  <View style={{ gap: 10 }}>
+                    {section.items.map((item) => (
+                      <Card
+                        key={item.topic}
+                        bg={colors.box}
+                        border={colors.border}
+                        style={{ gap: 6, padding: 12 }}
+                      >
+                        <Text
+                          style={{
+                            color: colors.fg,
+                            fontSize: 15,
+                            fontWeight: "800",
+                          }}
+                        >
+                          {item.topic}
+                        </Text>
+                        <Text style={{ color: colors.muted, lineHeight: 21 }}>
+                          {item.reason}
+                        </Text>
+                      </Card>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                    {section.proMessage ||
+                      "Nothing to study up on you are already a pro!!"}
+                  </Text>
+                )}
+              </Card>
+            );
+          }
+
           const transcriptPreviewCount = section.previewTurns ?? 3;
           const previewTurns = analysis.turns.slice(0, transcriptPreviewCount);
           const transcriptExpanded = expandedTranscriptKey === section.key;
@@ -941,11 +1094,11 @@ export default function SummaryScreen() {
               )}
             </Card>
           );
-        })}
-      </View>
+            })}
+          </View>
 
-      {materials.length ? (
-        <Card style={{ gap: 12 }}>
+          {materials.length ? (
+            <Card style={{ gap: 12 }}>
           <View style={{ gap: 8 }}>
             <Text
               style={{
@@ -1030,57 +1183,59 @@ export default function SummaryScreen() {
               </Pressable>
             </View>
           )}
-        </Card>
-      ) : null}
+            </Card>
+          ) : null}
+        </ScrollView>
 
-      <View style={{ gap: 10 }}>
-        <AppButton
-          title="Save Session"
-          color={colors.accent}
-          fg={colors.onAccent}
-          style={{ paddingVertical: 14 }}
-          onPress={async () => {
-            try {
-              const saved = await saveCurrentSummary();
-              clearCurrentFlow();
-              router.replace(`/history/${saved.id}` as any);
-            } catch (error: any) {
+        <View style={{ gap: 10, paddingTop: 4 }}>
+          <AppButton
+            title="Save Session"
+            color={colors.accent}
+            fg={colors.onAccent}
+            style={{ paddingVertical: 14 }}
+            onPress={async () => {
+              try {
+                const saved = await saveCurrentSummary();
+                clearCurrentFlow();
+                router.replace(`/history/${saved.id}` as any);
+              } catch (error: any) {
+                Alert.alert(
+                  "Save failed",
+                  error?.message ?? "Unable to save this session."
+                );
+              }
+            }}
+          />
+          <Pressable
+            onPress={() => {
               Alert.alert(
-                "Save failed",
-                error?.message ?? "Unable to save this session."
-              );
-            }
-          }}
-        />
-        <Pressable
-          onPress={() => {
-            Alert.alert(
-              "Discard session?",
-              "This will clear the current summary and return you home.",
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Discard",
-                  style: "destructive",
-                  onPress: () => {
-                    clearCurrentFlow();
-                    router.replace("/");
+                "Discard session?",
+                "This will clear the current summary and return you home.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Discard",
+                    style: "destructive",
+                    onPress: () => {
+                      clearCurrentFlow();
+                      router.replace("/");
+                    },
                   },
-                },
-              ]
-            );
-          }}
-        >
-          <Text
-            style={{
-              color: colors.muted,
-              textAlign: "center",
-              fontWeight: "700",
+                ]
+              );
             }}
           >
-            Discard and return home
-          </Text>
-        </Pressable>
+            <Text
+              style={{
+                color: colors.muted,
+                textAlign: "center",
+                fontWeight: "700",
+              }}
+            >
+              Discard and return home
+            </Text>
+          </Pressable>
+        </View>
       </View>
     </Screen>
   );

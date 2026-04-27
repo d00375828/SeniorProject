@@ -76,10 +76,9 @@ export const SCENARIOS: ScenarioDefinition[] = [
       mode: "emotional",
       introLabel: "Conversation recap",
       sections: [
-        { key: "quote", title: "Best moment", kind: "quote" },
         {
           key: "strengths",
-          title: "What helped the conversation",
+          title: "YOUR BEST MOMENTS",
           kind: "bullets",
         },
         {
@@ -114,9 +113,16 @@ export const SCENARIOS: ScenarioDefinition[] = [
       introLabel: "Q&A recap",
       sections: [
         { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
-        { key: "strengths", title: "What held up well", kind: "bullets" },
-        { key: "metrics", title: "Pressure signals", kind: "metrics" },
-        { key: "focus", title: "What to tighten up", kind: "bullets" },
+        {
+          key: "question-review",
+          title: "Question Review",
+          kind: "question-review",
+        },
+        {
+          key: "study-topics",
+          title: "Topics To Brush Up On",
+          kind: "study-topics",
+        },
         { key: "transcript", title: "Transcript", kind: "transcript" },
       ],
     },

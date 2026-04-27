@@ -36,7 +36,9 @@ export type SummarySectionKind =
   | "quote"
   | "job-coverage"
   | "reflection"
-  | "rewrite";
+  | "rewrite"
+  | "question-review"
+  | "study-topics";
 
 export type SummarySectionSpec = {
   key: string;
@@ -153,6 +155,26 @@ export type SummarySection =
         original: string;
         revised: string;
       }>;
+    }
+  | {
+      key: string;
+      kind: "question-review";
+      title: string;
+      items: Array<{
+        question: string;
+        level: "Beginner" | "Intermediate" | "Advanced" | "Expert";
+        feedback: string;
+      }>;
+    }
+  | {
+      key: string;
+      kind: "study-topics";
+      title: string;
+      items: Array<{
+        topic: string;
+        reason: string;
+      }>;
+      proMessage?: string;
     };
 
 export type SessionSummary = {

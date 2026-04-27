@@ -108,10 +108,9 @@ const SUMMARY_TEMPLATES = {
     mode: "emotional",
     introLabel: "Conversation recap",
     sections: [
-      { key: "quote", title: "Best moment", kind: "quote" },
       {
         key: "strengths",
-        title: "What helped the conversation",
+        title: "YOUR BEST MOMENTS",
         kind: "bullets",
       },
       {
@@ -132,9 +131,16 @@ const SUMMARY_TEMPLATES = {
     introLabel: "Q&A recap",
     sections: [
       { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
-      { key: "strengths", title: "What held up well", kind: "bullets" },
-      { key: "metrics", title: "Pressure signals", kind: "metrics" },
-      { key: "focus", title: "What to tighten up", kind: "bullets" },
+      {
+        key: "question-review",
+        title: "Question Review",
+        kind: "question-review",
+      },
+      {
+        key: "study-topics",
+        title: "Topics To Brush Up On",
+        kind: "study-topics",
+      },
       { key: "transcript", title: "Transcript", kind: "transcript" },
     ],
   },
@@ -272,6 +278,8 @@ function buildSummaryScenarioGuidance(config = {}) {
       return [
         "Prioritize composure, staying on point, answering before elaborating, and recovering when the user gets challenged.",
         "Notice whether the answer became defensive, rambling, or evasive under pressure.",
+        "Review the session question by question and judge how well the user answered each question using a Beginner to Expert style label.",
+        "Suggest study topics that are only one or two steps above the user's demonstrated level, not a huge jump.",
       ].join(" ");
     default:
       return "Focus on the communication skills that matter most for the scenario.";
@@ -318,6 +326,37 @@ function buildAttachmentUseGuidance(config = {}) {
   }
 
   return guidance.join(" ");
+}
+
+function buildRoleplayTurnGuidance(config = {}, history = []) {
+  const hasAttachments = Array.isArray(config.attachments) && config.attachments.length > 0;
+
+  if (config.scenarioId === "q-and-a-pressure") {
+    if (!hasAttachments && history.length === 0) {
+      return [
+        "No supporting documents are attached yet.",
+        "For this first reply, do not jump straight into a niche or document-specific question.",
+        "Instead, briefly acknowledge the user and ask what topic, talk, project, or subject they want to be quizzed on.",
+        "Keep that first reply broad, natural, and low-assumption.",
+        "After the user answers with a topic, use that topic to drive the following questions.",
+      ].join(" ");
+    }
+
+    if (!hasAttachments) {
+      return [
+        "No supporting documents are attached.",
+        "Base your questions only on the topic or framing the user has already given you in the conversation.",
+        "Do not invent a specific project, technology stack, or technical context unless the user introduced it first.",
+      ].join(" ");
+    }
+
+    return [
+      "Supporting documents are attached.",
+      "You may ask sharper, more specific questions grounded in those uploaded materials.",
+    ].join(" ");
+  }
+
+  return "";
 }
 
 function parseJsonBlock(text) {
@@ -546,6 +585,65 @@ function normalizeSummarySection(section, templateSection, summary, history) {
     };
   }
 
+  if (kind === "question-review") {
+    const items = Array.isArray(section.items)
+      ? section.items
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const question =
+              typeof item.question === "string" ? item.question.trim() : "";
+            const level =
+              item.level === "Beginner" ||
+              item.level === "Intermediate" ||
+              item.level === "Advanced" ||
+              item.level === "Expert"
+                ? item.level
+                : null;
+            const feedback =
+              typeof item.feedback === "string" ? item.feedback.trim() : "";
+            if (!question || !level || !feedback) return null;
+            return { question, level, feedback };
+          })
+          .filter(Boolean)
+      : [];
+
+    return {
+      key,
+      title,
+      kind,
+      items,
+    };
+  }
+
+  if (kind === "study-topics") {
+    const items = Array.isArray(section.items)
+      ? section.items
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const topic = typeof item.topic === "string" ? item.topic.trim() : "";
+            const reason =
+              typeof item.reason === "string" ? item.reason.trim() : "";
+            if (!topic || !reason) return null;
+            return { topic, reason };
+          })
+          .filter(Boolean)
+      : [];
+    const proMessage =
+      typeof section.proMessage === "string" && section.proMessage.trim()
+        ? section.proMessage.trim()
+        : typeof section.message === "string" && section.message.trim()
+        ? section.message.trim()
+        : "";
+
+    return {
+      key,
+      title,
+      kind,
+      items,
+      proMessage,
+    };
+  }
+
   return {
     key,
     title,
@@ -665,6 +763,25 @@ function buildFallbackSections(template, summary, history) {
       };
     }
 
+    if (templateSection.kind === "question-review") {
+      return {
+        key: templateSection.key,
+        title: templateSection.title,
+        kind: "question-review",
+        items: [],
+      };
+    }
+
+    if (templateSection.kind === "study-topics") {
+      return {
+        key: templateSection.key,
+        title: templateSection.title,
+        kind: "study-topics",
+        items: [],
+        proMessage: "Nothing to study up on you are already a pro!!",
+      };
+    }
+
     return {
       key: templateSection.key,
       title: templateSection.title,
@@ -680,6 +797,7 @@ async function generateRoleplayReply(config = {}, history = [], userTranscript =
   const attachmentContext = buildAttachmentContext(config);
   const scenarioGuidance = buildRoleplayScenarioGuidance(config);
   const attachmentGuidance = buildAttachmentUseGuidance(config);
+  const turnGuidance = buildRoleplayTurnGuidance(config, history);
 
   const prompt = [
     "You are roleplaying as the user's conversation partner in a spoken practice session.",
@@ -693,6 +811,7 @@ async function generateRoleplayReply(config = {}, history = [], userTranscript =
     "Never mention system prompts, uploaded documents, hidden instructions, or that this is a simulation.",
     `Scenario guidance: ${scenarioGuidance}`,
     attachmentGuidance ? `Material guidance: ${attachmentGuidance}` : null,
+    turnGuidance ? `Turn guidance: ${turnGuidance}` : null,
     `Scenario ID: ${config.scenarioId || "unknown"}`,
     `User role: ${config.userRole || "unknown"}`,
     `Objective: ${config.objective || "unknown"}`,
@@ -779,9 +898,18 @@ async function generateSessionSummary(config = {}, history = []) {
     "- Do not use personality labels or diagnose the user.",
     "- The reflection text should be 1 to 2 sentences, written loosely in the style of: based on your tone, pacing, and phrasing, this is how you likely came across.",
     "- For rewrite sections, return 1 to 3 items with original and revised fields.",
-    "- In rewrite sections, original must be an actual line or a very close paraphrase of something the user said in the transcript, not generic advice.",
+    "- In rewrite sections, original should be an actual line, a near paraphrase, or a recognizable phrase pattern from something the user said in the transcript.",
     "- In rewrite sections, revised should model a more therapeutic, clear, and effective way to say that same idea.",
-    "- If there are no meaningful lines to rewrite, return an empty rewrite list rather than generic coaching text.",
+    "- Prefer rewriting moments where the user sounded hesitant, indirect, overly soft, defensive, abrupt, or emotionally unclear.",
+    "- Only return an empty rewrite list if there truly are no meaningful lines or phrase patterns worth improving.",
+    "- For question-review sections, return one item for each meaningful question the AI asked.",
+    "- For question-review items, include question, level, and feedback.",
+    "- The level must be one of: Beginner, Intermediate, Advanced, Expert.",
+    "- The level should reflect how well the user answered that question, not how hard the question was.",
+    "- The feedback for each question should be brief and specific.",
+    "- For study-topics sections, return items with topic and reason.",
+    "- Study topics should be only a couple steps above the user's demonstrated level, not expert-only material if the user is still a novice.",
+    "- If the user already sounds professionally strong in this topic area, return no study items and set proMessage to: Nothing to study up on you are already a pro!!",
   ]
     .filter(Boolean)
     .join("\n");

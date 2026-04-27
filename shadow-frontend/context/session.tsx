@@ -30,6 +30,7 @@ type SessionContextType = {
   saveCurrentSummary: () => Promise<SavedSession>;
   clearCurrentFlow: () => void;
   getSavedSession: (id: string) => SavedSession | undefined;
+  deleteSavedSession: (id: string) => void;
 };
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -311,6 +312,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return savedSessions.find((session) => session.id === id);
   }
 
+  function deleteSavedSession(id: string) {
+    setSavedSessions((current) => current.filter((session) => session.id !== id));
+  }
+
   const value = useMemo<SessionContextType>(
     () => ({
       scenarios: SCENARIOS,
@@ -327,6 +332,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       saveCurrentSummary,
       clearCurrentFlow,
       getSavedSession,
+      deleteSavedSession,
     }),
     [activeSession, currentSummary, savedSessions]
   );
