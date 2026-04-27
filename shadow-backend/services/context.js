@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const pdfParse = require("pdf-parse");
+const { PDFParse } = require("pdf-parse");
 
 const MAX_EXTRACTED_TEXT_LENGTH = 20000;
 const MAX_PROMPT_TEXT_LENGTH = 4000;
@@ -50,8 +50,14 @@ async function extractAttachmentText(filePath, mimeType, fileName) {
 
   if (PDF_MIME_TYPES.has(mimeType) || PDF_EXTENSIONS.has(extension)) {
     const fileBuffer = fs.readFileSync(filePath);
-    const parsed = await pdfParse(fileBuffer);
-    return trimExtractedText(parsed.text || "");
+    const parser = new PDFParse({ data: fileBuffer });
+
+    try {
+      const parsed = await parser.getText();
+      return trimExtractedText(parsed.text || "");
+    } finally {
+      await parser.destroy();
+    }
   }
 
   throw new Error(
