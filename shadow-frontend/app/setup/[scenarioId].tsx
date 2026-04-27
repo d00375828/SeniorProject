@@ -27,9 +27,10 @@ const ATTACHMENT_KIND_OPTIONS: { kind: AttachmentKind; label: string }[] = [
   { kind: "slides", label: "Slides" },
   { kind: "instructions", label: "Instructions" },
   { kind: "rubric", label: "Rubric" },
+  { kind: "resume", label: "Resume" },
+  { kind: "job-listing", label: "Job Listing" },
   { kind: "notes", label: "Notes" },
 ];
-const MAX_ATTACHMENTS = 3;
 const MAX_ATTACHMENT_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const SUPPORTED_ATTACHMENT_EXTENSIONS = [".pdf", ".txt", ".md"];
 
@@ -48,6 +49,7 @@ const scenarioGlow = {
 } as const;
 
 type FieldKey = "userRole" | "objective" | "partnerStyle";
+type AttachmentFieldKey = "attachmentKind";
 
 const customOption = "custom";
 
@@ -83,6 +85,8 @@ export default function SetupScreen() {
     scenario?.defaultConfig.partnerStyle ?? ""
   );
   const [dropdownOpen, setDropdownOpen] = useState<FieldKey | null>(null);
+  const [attachmentDropdownOpen, setAttachmentDropdownOpen] =
+    useState<AttachmentFieldKey | null>(null);
   const [customField, setCustomField] = useState<FieldKey | null>(null);
   const [selectedAttachmentKind, setSelectedAttachmentKind] =
     useState<AttachmentKind>("slides");
@@ -396,13 +400,6 @@ export default function SetupScreen() {
 
   async function onPickDocument() {
     if (uploadBusy) return;
-    if (attachments.length >= MAX_ATTACHMENTS) {
-      Alert.alert(
-        "Limit reached",
-        "Upload up to 3 supporting files for this session."
-      );
-      return;
-    }
 
     try {
       setUploadError(null);
@@ -635,8 +632,8 @@ export default function SetupScreen() {
               Upload materials - Optional
             </Text>
             <Text style={{ color: colors.muted, lineHeight: 21 }}>
-              Upload a script, rubric, or notes. The AI will use it to guide
-              your roleplay.
+              Upload context documents for the scenario. The AI will use them
+              to guide your roleplay.
             </Text>
 
             <Card bg={colors.box} border={colors.border} style={{ gap: 8 }}>
@@ -650,52 +647,128 @@ export default function SetupScreen() {
                 Supported files
               </Text>
               <Text style={{ color: colors.fg, lineHeight: 21 }}>
-                PDF, TXT, and Markdown. Maximum of 3 files per session, up to 10
-                MB each.
+                PDF, TXT, and Markdown. Upload as many files as you need, up to
+                10 MB each.
               </Text>
             </Card>
 
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {ATTACHMENT_KIND_OPTIONS.map((option) => {
-                const selected = selectedAttachmentKind === option.kind;
-                return (
-                  <Pressable
-                    key={option.kind}
-                    onPress={() => setSelectedAttachmentKind(option.kind)}
+            <View style={{ gap: 8 }}>
+              <Text
+                style={{ color: colors.muted, fontSize: 12, fontWeight: "700" }}
+              >
+                Material type
+              </Text>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor:
+                    attachmentDropdownOpen === "attachmentKind"
+                      ? featuredAccent
+                      : colors.border,
+                  borderRadius: 14,
+                  backgroundColor: colors.box,
+                  overflow: "hidden",
+                }}
+              >
+                <Pressable
+                  onPress={() =>
+                    setAttachmentDropdownOpen(
+                      attachmentDropdownOpen === "attachmentKind"
+                        ? null
+                        : "attachmentKind"
+                    )
+                  }
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 12,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
                     style={{
-                      borderWidth: 1,
-                      borderColor: selected ? featuredAccent : colors.border,
-                      borderRadius: 999,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      backgroundColor: selected ? featuredGlow : colors.box,
+                      color: colors.fg,
+                      fontWeight: "700",
+                      flex: 1,
+                      paddingRight: 12,
                     }}
+                    numberOfLines={1}
                   >
-                    <Text
-                      style={{
-                        color: selected ? featuredAccent : colors.fg,
-                        fontWeight: "700",
-                      }}
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+                    {
+                      ATTACHMENT_KIND_OPTIONS.find(
+                        (option) => option.kind === selectedAttachmentKind
+                      )?.label
+                    }
+                  </Text>
+                  <Text style={{ color: featuredAccent, fontWeight: "800" }}>
+                    {attachmentDropdownOpen === "attachmentKind" ? "▴" : "▾"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {attachmentDropdownOpen === "attachmentKind" ? (
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 14,
+                    backgroundColor: colors.card,
+                    padding: 10,
+                    gap: 8,
+                  }}
+                >
+                  {ATTACHMENT_KIND_OPTIONS.map((option) => {
+                    const selected = selectedAttachmentKind === option.kind;
+                    return (
+                      <Pressable
+                        key={option.kind}
+                        onPress={() => {
+                          setSelectedAttachmentKind(option.kind);
+                          setAttachmentDropdownOpen(null);
+                        }}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: selected ? featuredAccent : colors.border,
+                          borderRadius: 12,
+                          paddingHorizontal: 12,
+                          paddingVertical: 10,
+                          backgroundColor: selected ? featuredGlow : colors.box,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: selected ? featuredAccent : colors.fg,
+                            fontWeight: "700",
+                          }}
+                        >
+                          {option.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : null}
             </View>
 
             <AppButton
               title={
-                uploadBusy ? "Uploading..." : `Upload ${selectedAttachmentKind}`
+                uploadBusy
+                  ? "Uploading..."
+                  : `Upload ${
+                      ATTACHMENT_KIND_OPTIONS.find(
+                        (option) => option.kind === selectedAttachmentKind
+                      )?.label ?? "Material"
+                    }`
               }
               color={featuredAccent}
               fg={colors.onAccent}
-              disabled={uploadBusy || attachments.length >= MAX_ATTACHMENTS}
+              disabled={uploadBusy}
               onPress={onPickDocument}
             />
 
             <Text style={{ color: colors.muted, fontSize: 12 }}>
-              Up to 3 files per session.
+              Each file is tagged with the selected material type.
             </Text>
 
             {uploadError ? (

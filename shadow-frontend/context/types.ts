@@ -1,6 +1,12 @@
 export type SessionRole = "user" | "assistant";
 
-export type AttachmentKind = "slides" | "instructions" | "rubric" | "notes";
+export type AttachmentKind =
+  | "slides"
+  | "instructions"
+  | "rubric"
+  | "resume"
+  | "job-listing"
+  | "notes";
 
 export type SessionAttachment = {
   id: string;
@@ -27,7 +33,10 @@ export type SummarySectionKind =
   | "bullets"
   | "metrics"
   | "transcript"
-  | "quote";
+  | "quote"
+  | "job-coverage"
+  | "reflection"
+  | "rewrite";
 
 export type SummarySectionSpec = {
   key: string;
@@ -120,6 +129,30 @@ export type SummarySection =
       kind: "transcript";
       title: string;
       previewTurns?: number;
+    }
+  | {
+      key: string;
+      kind: "job-coverage";
+      title: string;
+      coveredItems: string[];
+      missingItems: string[];
+      hireLikelihood?: string;
+    }
+  | {
+      key: string;
+      kind: "reflection";
+      title: string;
+      traits: string[];
+      text: string;
+    }
+  | {
+      key: string;
+      kind: "rewrite";
+      title: string;
+      items: Array<{
+        original: string;
+        revised: string;
+      }>;
     };
 
 export type SessionSummary = {

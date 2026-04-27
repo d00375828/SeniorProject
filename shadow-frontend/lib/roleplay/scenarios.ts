@@ -47,17 +47,21 @@ export const SCENARIOS: ScenarioDefinition[] = [
       mode: "objective",
       introLabel: "Interview recap",
       sections: [
-        { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
         { key: "strengths", title: "What worked", kind: "bullets" },
-        { key: "metrics", title: "Interview signals", kind: "metrics" },
         { key: "focus", title: "What to sharpen", kind: "bullets" },
+        {
+          key: "job-coverage",
+          title: "Job Description Coverage",
+          kind: "job-coverage",
+          requiresAttachmentKind: "job-listing",
+        },
         { key: "transcript", title: "Transcript", kind: "transcript" },
       ],
     },
   },
   {
     id: "difficult-conversation",
-    title: "Difficult Conversation",
+    title: "Crucial Conversation",
     description:
       "Practice a high-stakes personal or professional conversation where tone, empathy, and boundaries matter.",
     category: "Conversation",
@@ -72,10 +76,22 @@ export const SCENARIOS: ScenarioDefinition[] = [
       mode: "emotional",
       introLabel: "Conversation recap",
       sections: [
-        { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
         { key: "quote", title: "Best moment", kind: "quote" },
-        { key: "strengths", title: "What went well", kind: "bullets" },
-        { key: "focus", title: "What to try next", kind: "bullets" },
+        {
+          key: "strengths",
+          title: "What helped the conversation",
+          kind: "bullets",
+        },
+        {
+          key: "impression",
+          title: "How you likely came across",
+          kind: "reflection",
+        },
+        {
+          key: "rewrite",
+          title: "A better way to say it",
+          kind: "rewrite",
+        },
         { key: "transcript", title: "Transcript", kind: "transcript" },
       ],
     },

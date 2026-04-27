@@ -8,6 +8,8 @@ const SUPPORTED_ATTACHMENT_KINDS = new Set([
   "slides",
   "instructions",
   "rubric",
+  "resume",
+  "job-listing",
   "notes",
 ]);
 

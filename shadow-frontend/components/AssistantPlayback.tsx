@@ -1,8 +1,13 @@
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
+} from "expo-audio";
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { useTheme } from "@/context";
+import { IDLE_AUDIO_MODE } from "@/lib/audio/audioMode";
 
 type Props = {
   uri: string;
@@ -36,6 +41,7 @@ export default function AssistantPlayback({
       try {
         onPlaybackStartRef.current?.();
         setPlaying(true);
+        await setAudioModeAsync(IDLE_AUDIO_MODE);
         await player.seekTo(0);
         await player.play();
       } catch (error: any) {
@@ -73,6 +79,7 @@ export default function AssistantPlayback({
           try {
             onPlaybackStartRef.current?.();
             setPlaying(true);
+            await setAudioModeAsync(IDLE_AUDIO_MODE);
             await player.seekTo(0);
             await player.play();
           } catch (error: any) {

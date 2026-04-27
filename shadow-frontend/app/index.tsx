@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import React, { useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Modal, Pressable, Switch, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import Card from "@/components/Card";
@@ -38,8 +38,9 @@ function getNextPracticeId(lastScenarioId?: string) {
 }
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
+  const { colors, isDark, setThemeMode } = useTheme();
   const { scenarios, savedSessions } = useSession();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const recommendedScenario = useMemo(() => {
     const latestSaved = savedSessions[savedSessions.length - 1];
     const recommendedId = getNextPracticeId(latestSaved?.scenario.id);
@@ -61,13 +62,117 @@ export default function HomeScreen() {
       <PageHeader
         title="Shadow"
         right={
-          <Pressable onPress={() => router.push("/history" as any)}>
-            <Text style={{ color: colors.accent, fontWeight: "700" }}>
-              Saved {savedSessions.length}
-            </Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Pressable onPress={() => router.push("/history" as any)}>
+              <Text style={{ color: colors.accent, fontWeight: "700" }}>
+                Saved {savedSessions.length}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setSettingsOpen(true)}
+              style={({ pressed }) => ({
+                height: 38,
+                width: 38,
+                borderRadius: 19,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.box,
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: pressed ? 0.82 : 1,
+              })}
+            >
+              <Ionicons name="settings-outline" size={18} color={colors.fg} />
+            </Pressable>
+          </View>
         }
       />
+
+      <Modal
+        visible={settingsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSettingsOpen(false)}
+      >
+        <Pressable
+          onPress={() => setSettingsOpen(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.42)",
+            paddingHorizontal: 20,
+            alignItems: "flex-end",
+            justifyContent: "flex-start",
+            paddingTop: 76,
+          }}
+        >
+          <Pressable onPress={(event) => event.stopPropagation()}>
+            <Card
+              bg={colors.card}
+              border={colors.border}
+              style={{
+                width: 250,
+                gap: 16,
+                padding: 16,
+                shadowColor: "#000",
+                shadowOpacity: 0.22,
+                shadowRadius: 20,
+                shadowOffset: { width: 0, height: 12 },
+                elevation: 8,
+              }}
+            >
+              <View style={{ gap: 4 }}>
+                <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800" }}>
+                  Settings
+                </Text>
+                <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                  Switch between light and dark mode.
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ color: colors.fg, fontWeight: "700" }}>
+                    Dark mode
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>
+                    {isDark ? "Enabled" : "Disabled"}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: isDark ? `${colors.accent}22` : colors.box,
+                    borderWidth: 1,
+                    borderColor: isDark ? colors.accent : colors.muted,
+                  }}
+                >
+                  <Switch
+                    value={isDark}
+                    onValueChange={(value) =>
+                      setThemeMode(value ? "dark" : "light")
+                    }
+                    trackColor={{
+                      false: colors.muted,
+                      true: colors.accent,
+                    }}
+                    ios_backgroundColor={colors.muted}
+                    thumbColor={isDark ? colors.onAccent : colors.fg}
+                  />
+                </View>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Card
         bg={colors.card}

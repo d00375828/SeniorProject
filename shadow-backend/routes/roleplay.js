@@ -84,7 +84,8 @@ router.post(
       const kind = typeof req.body.kind === "string" ? req.body.kind.trim() : "";
       if (!validateAttachmentKind(kind)) {
         return res.status(400).json({
-          error: "Invalid attachment kind. Use slides, instructions, rubric, or notes.",
+          error:
+            "Invalid attachment kind. Use slides, instructions, rubric, resume, job-listing, or notes.",
         });
       }
 

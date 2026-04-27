@@ -122,6 +122,8 @@ function normalizeAttachmentResponse(payload: any): SessionAttachment {
     payload.kind !== "slides" &&
     payload.kind !== "instructions" &&
     payload.kind !== "rubric" &&
+    payload.kind !== "resume" &&
+    payload.kind !== "job-listing" &&
     payload.kind !== "notes"
   ) {
     throw new Error("Attachment upload returned an invalid attachment kind.");

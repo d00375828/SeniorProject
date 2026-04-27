@@ -116,6 +116,7 @@ const ThemeCtx = createContext<{
   colors: ThemeColors;
   isDark: boolean;
   toggleTheme: () => void;
+  setThemeMode: (mode: "dark" | "light") => void;
 } | null>(null);
 
 type ThemeProviderProps = {
@@ -141,6 +142,7 @@ export function ThemeProvider({
   }, [isDark]);
 
   const toggleTheme = () => setIsDark((p) => !p);
+  const setThemeMode = (mode: "dark" | "light") => setIsDark(mode === "dark");
 
   const colors = useMemo(() => {
     if (scenarioId) {
@@ -153,7 +155,7 @@ export function ThemeProvider({
   }, [isDark, scenarioId]);
 
   return (
-    <ThemeCtx.Provider value={{ colors, isDark, toggleTheme }}>
+    <ThemeCtx.Provider value={{ colors, isDark, toggleTheme, setThemeMode }}>
       {children}
     </ThemeCtx.Provider>
   );

@@ -1,5 +1,5 @@
 // hooks/useRecorder.ts
-import { RECORDING_AUDIO_MODE } from "@/lib/audio/audioMode";
+import { IDLE_AUDIO_MODE, RECORDING_AUDIO_MODE } from "@/lib/audio/audioMode";
 import {
   AudioModule,
   RecordingPresets,
@@ -128,12 +128,14 @@ export function useRecorder() {
     try {
       await recorder.stop();
       const nextUri = recorder.uri ?? null;
+      await setAudioModeAsync(IDLE_AUDIO_MODE);
       // only set URI if still current session
       if (token === sessionRef.current) {
         setUri(nextUri);
       }
       return nextUri;
     } catch (e: any) {
+      await setAudioModeAsync(IDLE_AUDIO_MODE);
       Alert.alert("Stop error", String(e?.message ?? e));
       return null;
     }
@@ -145,6 +147,7 @@ export function useRecorder() {
     setUri(null);
     setSeconds(0);
     setIsRecording(false);
+    void setAudioModeAsync(IDLE_AUDIO_MODE);
   }
 
   return { isRecording, uri, seconds, pulse, start, stop, reset };

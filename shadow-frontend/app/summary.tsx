@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 
 import AppButton from "@/components/AppButton";
@@ -116,54 +116,99 @@ function defaultSummarySections(
       return hasAttachmentKind(attachments, section.requiresAttachmentKind);
     })
     .map((section) => {
-    if (section.kind === "takeaway") {
+      if (section.kind === "takeaway") {
+        return {
+          key: section.key,
+          kind: "takeaway",
+          title: section.title,
+          text: coachTakeaway(wins),
+        };
+      }
+
+      if (section.kind === "bullets") {
+        return {
+          key: section.key,
+          kind: "bullets",
+          title: section.title,
+          items: section.key.toLowerCase().includes("focus") ? drills : wins,
+        };
+      }
+
+      if (section.kind === "metrics") {
+        const items: SummaryMetric[] = [
+          {
+            key: `${section.key}-wins`,
+            label: "Wins",
+            value: String(wins.length),
+            tone: "positive",
+          },
+          {
+            key: `${section.key}-drills`,
+            label: "Focus items",
+            value: String(drills.length),
+            tone: "neutral",
+          },
+        ];
+
+        return {
+          key: section.key,
+          kind: "metrics",
+          title: section.title,
+          items,
+        };
+      }
+
+      if (section.kind === "quote") {
+        return {
+          key: section.key,
+          kind: "quote",
+          title: section.title,
+          text: wins[0] ? coachFragment(wins[0], 16) : coachTakeaway(wins),
+          speaker: "you",
+        };
+      }
+
+      if (section.kind === "job-coverage") {
+        const hireLikelihood = Math.max(
+          25,
+          Math.min(92, 58 + wins.length * 6 - drills.length * 5)
+        );
+
+        return {
+          key: section.key,
+          kind: "job-coverage",
+          title: section.title,
+          coveredItems: [],
+          missingItems: [],
+          hireLikelihood: `${hireLikelihood}%`,
+        };
+      }
+
+      if (section.kind === "reflection") {
+        return {
+          key: section.key,
+          kind: "reflection",
+          title: section.title,
+          traits: [],
+          text: coachTakeaway(wins),
+        };
+      }
+
+      if (section.kind === "rewrite") {
+        return {
+          key: section.key,
+          kind: "rewrite",
+          title: section.title,
+          items: [],
+        };
+      }
+
       return {
         key: section.key,
-        kind: "takeaway",
+        kind: "transcript",
         title: section.title,
-        text: coachTakeaway(wins),
+        previewTurns: section.maxItems ?? 3,
       };
-    }
-
-    if (section.kind === "bullets") {
-      return {
-        key: section.key,
-        kind: "bullets",
-        title: section.title,
-        items: section.key.toLowerCase().includes("focus") ? drills : wins,
-      };
-    }
-
-    if (section.kind === "metrics") {
-      const items: SummaryMetric[] = [
-        { key: `${section.key}-wins`, label: "Wins", value: String(wins.length), tone: "positive" },
-        { key: `${section.key}-drills`, label: "Focus items", value: String(drills.length), tone: "neutral" },
-      ];
-
-      return {
-        key: section.key,
-        kind: "metrics",
-        title: section.title,
-        items,
-      };
-    }
-
-    if (section.kind === "quote") {
-      return {
-        key: section.key,
-        kind: "quote",
-        title: section.title,
-        text: wins[0] ? coachFragment(wins[0], 16) : coachTakeaway(wins),
-        speaker: "you",
-      };
-    }
-
-    return {
-      key: section.key,
-      kind: "transcript",
-      title: section.title,
-      previewTurns: section.maxItems ?? 3,
-    };
     });
 }
 
@@ -173,10 +218,7 @@ function metricCardTone(tone?: SummaryMetric["tone"]) {
   return "#25b8a6";
 }
 
-function hasAttachmentKind(
-  attachments: { kind: string }[],
-  kind: string
-) {
+function hasAttachmentKind(attachments: { kind: string }[], kind: string) {
   return attachments.some((attachment) => attachment.kind === kind);
 }
 
@@ -189,7 +231,15 @@ export default function SummaryScreen() {
     clearCurrentFlow,
   } = useSession();
   const [materialsExpanded, setMaterialsExpanded] = useState(false);
-  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
+  const [expandedTranscriptKey, setExpandedTranscriptKey] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!activeSession || !currentSummary) {
+      router.replace("/");
+    }
+  }, [activeSession, currentSummary]);
 
   const analysis = useMemo(() => {
     const turns = activeSession?.turns ?? [];
@@ -213,26 +263,50 @@ export default function SummaryScreen() {
   ]);
 
   if (!activeSession || !currentSummary) {
-    router.replace("/");
     return null;
   }
 
   const materials = activeSession.config.attachments ?? [];
   const templateSections =
     activeSession.scenario.summaryTemplate?.sections ?? [];
-  const summarySections =
-    currentSummary.sections?.length
-      ? currentSummary.sections.filter((section) => {
-          const spec = templateSections.find((item) => item.key === section.key);
-          if (!spec?.requiresAttachmentKind) return true;
-          return hasAttachmentKind(materials, spec.requiresAttachmentKind);
-        })
-      : defaultSummarySections(
-          currentSummary.wins,
-          currentSummary.drills,
-          templateSections,
-          materials
-        );
+  const summarySections = currentSummary.sections?.length
+    ? currentSummary.sections.filter((section) => {
+        const spec = templateSections.find((item) => item.key === section.key);
+        if (!spec?.requiresAttachmentKind) return true;
+        return hasAttachmentKind(materials, spec.requiresAttachmentKind);
+      }).map((section) => {
+        if (
+          activeSession.scenario.id === "difficult-conversation" &&
+          section.kind === "transcript"
+        ) {
+          if (section.key === "impression") {
+            return {
+              key: section.key,
+              kind: "reflection" as const,
+              title: section.title,
+              traits: [],
+              text: currentSummary.overview || coachTakeaway(currentSummary.wins),
+            };
+          }
+
+          if (section.key === "rewrite") {
+            return {
+              key: section.key,
+              kind: "rewrite" as const,
+              title: section.title,
+              items: [],
+            };
+          }
+        }
+
+        return section;
+      })
+    : defaultSummarySections(
+        currentSummary.wins,
+        currentSummary.drills,
+        templateSections,
+        materials
+      );
   const recapText = currentSummary.intro || coachTakeaway(currentSummary.wins);
 
   return (
@@ -278,7 +352,6 @@ export default function SummaryScreen() {
             opacity: 0.8,
           }}
         />
-
       </Card>
 
       <View style={{ gap: 14 }}>
@@ -297,7 +370,9 @@ export default function SummaryScreen() {
                 >
                   {section.title}
                 </Text>
-                <Text style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}>
+                <Text
+                  style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}
+                >
                   {section.text}
                 </Text>
               </Card>
@@ -352,7 +427,10 @@ export default function SummaryScreen() {
           }
 
           if (section.kind === "metrics") {
-            if (section.title.toLowerCase() === "score" && section.items.length === 1) {
+            if (
+              section.title.toLowerCase() === "score" &&
+              section.items.length === 1
+            ) {
               const metric = section.items[0];
               return (
                 <Card key={section.key} style={{ gap: 10 }}>
@@ -500,7 +578,9 @@ export default function SummaryScreen() {
                       {section.speaker === "you" ? "You" : "Partner"}
                     </Text>
                   ) : null}
-                  <Text style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}>
+                  <Text
+                    style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}
+                  >
                     {section.text}
                   </Text>
                 </View>
@@ -508,8 +588,236 @@ export default function SummaryScreen() {
             );
           }
 
+          if (section.kind === "job-coverage") {
+            return (
+              <Card key={section.key} style={{ gap: 14 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+
+                {section.hireLikelihood ? (
+                  <Card
+                    bg={colors.box}
+                    border={colors.border}
+                    style={{ gap: 8, padding: 14 }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: 12,
+                        fontWeight: "800",
+                      }}
+                    >
+                      Likelihood To Land The Job
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.fg,
+                        fontSize: 32,
+                        fontWeight: "900",
+                      }}
+                    >
+                      {section.hireLikelihood}
+                    </Text>
+                    <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                      Estimated from this session's interview performance and
+                      alignment to the uploaded job description.
+                    </Text>
+                  </Card>
+                ) : null}
+
+                <View style={{ gap: 10 }}>
+                  <Text
+                    style={{
+                      color: colors.fg,
+                      fontSize: 14,
+                      fontWeight: "800",
+                    }}
+                  >
+                    Key spots you covered
+                  </Text>
+                  {section.coveredItems.length ? (
+                    <View style={{ gap: 10 }}>
+                      {section.coveredItems.map((item) => (
+                        <Card
+                          key={item}
+                          bg={colors.box}
+                          border={colors.border}
+                          style={{ gap: 6, padding: 12 }}
+                        >
+                          <Text
+                            style={{
+                              color: colors.accent,
+                              fontSize: 11,
+                              fontWeight: "800",
+                            }}
+                          >
+                            Covered
+                          </Text>
+                          <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                            {item}
+                          </Text>
+                        </Card>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                      No covered job-description themes were identified.
+                    </Text>
+                  )}
+                </View>
+
+                <View style={{ gap: 10 }}>
+                  <Text
+                    style={{
+                      color: colors.fg,
+                      fontSize: 14,
+                      fontWeight: "800",
+                    }}
+                  >
+                    Key spots to cover next time
+                  </Text>
+                  {section.missingItems.length ? (
+                    <View style={{ gap: 10 }}>
+                      {section.missingItems.map((item) => (
+                        <Card
+                          key={item}
+                          bg={colors.box}
+                          border={colors.border}
+                          style={{ gap: 6, padding: 12 }}
+                        >
+                          <Text
+                            style={{
+                              color: "#D28C3C",
+                              fontSize: 11,
+                              fontWeight: "800",
+                            }}
+                          >
+                            Next Time
+                          </Text>
+                          <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                            {item}
+                          </Text>
+                        </Card>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                      No missing job-description themes were identified.
+                    </Text>
+                  )}
+                </View>
+              </Card>
+            );
+          }
+
+          if (section.kind === "reflection") {
+            return (
+              <Card key={section.key} style={{ gap: 10 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                {section.traits.length ? (
+                  <Text
+                    style={{
+                      color: colors.accent,
+                      fontSize: 13,
+                      fontWeight: "800",
+                      lineHeight: 20,
+                    }}
+                  >
+                    Perceived traits: {section.traits.join(", ")}
+                  </Text>
+                ) : null}
+                <Text style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}>
+                  {section.text}
+                </Text>
+              </Card>
+            );
+          }
+
+          if (section.kind === "rewrite") {
+            return (
+              <Card key={section.key} style={{ gap: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                {section.items.length ? (
+                  <View style={{ gap: 10 }}>
+                    {section.items.map((item, index) => (
+                      <Card
+                        key={`${item.original}-${index}`}
+                        bg={colors.box}
+                        border={colors.border}
+                        style={{ gap: 10, padding: 12 }}
+                      >
+                        <View style={{ gap: 4 }}>
+                          <Text
+                            style={{
+                              color: "#D28C3C",
+                              fontSize: 11,
+                              fontWeight: "800",
+                            }}
+                          >
+                            Original phrasing
+                          </Text>
+                          <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                            {item.original}
+                          </Text>
+                        </View>
+                        <View style={{ gap: 4 }}>
+                          <Text
+                            style={{
+                              color: colors.accent,
+                              fontSize: 11,
+                              fontWeight: "800",
+                            }}
+                          >
+                            Better way to say it
+                          </Text>
+                          <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                            {item.revised}
+                          </Text>
+                        </View>
+                      </Card>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                    No phrase rewrites were identified.
+                  </Text>
+                )}
+              </Card>
+            );
+          }
+
           const transcriptPreviewCount = section.previewTurns ?? 3;
           const previewTurns = analysis.turns.slice(0, transcriptPreviewCount);
+          const transcriptExpanded = expandedTranscriptKey === section.key;
 
           return (
             <Card key={section.key} style={{ gap: 12 }}>
@@ -528,7 +836,7 @@ export default function SummaryScreen() {
                 <Text style={{ color: colors.muted, lineHeight: 20 }}>
                   {transcriptExpanded
                     ? "Full session transcript."
-                    : "Preview only. Expand to review the full conversation."}
+                    : "Expand to review the full conversation."}
                 </Text>
               </View>
 
@@ -569,17 +877,25 @@ export default function SummaryScreen() {
                       No transcript available.
                     </Text>
                   )}
-                  <Pressable onPress={() => setTranscriptExpanded(false)}>
+                  <Pressable onPress={() => setExpandedTranscriptKey(null)}>
                     <Text style={{ color: colors.accent, fontWeight: "700" }}>
                       Hide transcript
                     </Text>
                   </Pressable>
                 </View>
               ) : (
-                <Pressable onPress={() => setTranscriptExpanded(true)}>
-                  <Card bg={colors.box} border={colors.border} style={{ gap: 10 }}>
+                <Pressable onPress={() => setExpandedTranscriptKey(section.key)}>
+                  <Card
+                    bg={colors.box}
+                    border={colors.border}
+                    style={{ gap: 10 }}
+                  >
                     <Text
-                      style={{ color: colors.muted, fontSize: 12, fontWeight: "800" }}
+                      style={{
+                        color: colors.muted,
+                        fontSize: 12,
+                        fontWeight: "800",
+                      }}
                     >
                       Preview
                     </Text>
@@ -596,7 +912,9 @@ export default function SummaryScreen() {
                             >
                               {speakerLabel(turn.role)}
                             </Text>
-                            <Text style={{ color: colors.muted, lineHeight: 21 }}>
+                            <Text
+                              style={{ color: colors.muted, lineHeight: 21 }}
+                            >
                               {excerpt(turn.text, 16)}
                             </Text>
                           </View>

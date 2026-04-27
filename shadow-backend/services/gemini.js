@@ -14,6 +14,12 @@ function buildHistory(history = []) {
     .join("\n");
 }
 
+function buildTranscript(history = []) {
+  return history
+    .map((turn) => `${turn.role === "user" ? "You" : "Partner"}: ${turn.text}`)
+    .join("\n");
+}
+
 function buildAttachmentContext(config = {}) {
   const attachments = Array.isArray(config.attachments) ? config.attachments : [];
   if (!attachments.length) {
@@ -24,6 +30,8 @@ function buildAttachmentContext(config = {}) {
     slides: [],
     instructions: [],
     rubric: [],
+    resume: [],
+    "job-listing": [],
     notes: [],
   };
 
@@ -85,10 +93,14 @@ const SUMMARY_TEMPLATES = {
     mode: "objective",
     introLabel: "Interview recap",
     sections: [
-      { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
       { key: "strengths", title: "What worked", kind: "bullets" },
-      { key: "metrics", title: "Interview signals", kind: "metrics" },
       { key: "focus", title: "What to sharpen", kind: "bullets" },
+      {
+        key: "job-coverage",
+        title: "Job Description Coverage",
+        kind: "job-coverage",
+        requiresAttachmentKind: "job-listing",
+      },
       { key: "transcript", title: "Transcript", kind: "transcript" },
     ],
   },
@@ -96,10 +108,22 @@ const SUMMARY_TEMPLATES = {
     mode: "emotional",
     introLabel: "Conversation recap",
     sections: [
-      { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
       { key: "quote", title: "Best moment", kind: "quote" },
-      { key: "strengths", title: "What went well", kind: "bullets" },
-      { key: "focus", title: "What to try next", kind: "bullets" },
+      {
+        key: "strengths",
+        title: "What helped the conversation",
+        kind: "bullets",
+      },
+      {
+        key: "impression",
+        title: "How you likely came across",
+        kind: "reflection",
+      },
+      {
+        key: "rewrite",
+        title: "A better way to say it",
+        kind: "rewrite",
+      },
       { key: "transcript", title: "Transcript", kind: "transcript" },
     ],
   },
@@ -188,6 +212,112 @@ function buildModeGuidance(mode) {
     default:
       return "Keep the feedback specific, coach-like, and grounded in the session.";
   }
+}
+
+function buildRoleplayScenarioGuidance(config = {}) {
+  switch (config.scenarioId) {
+    case "team-presentation":
+      return [
+        "You are the audience or evaluator during a live presentation practice.",
+        "React like a real listener: follow the substance, notice clarity, and ask natural follow-up questions when something is vague or unsupported.",
+        "If slides or notes are attached, treat them as the presentation source material and respond to the actual content rather than generic presentation filler.",
+        "Sound attentive and human, not like a coach grading the speaker in real time.",
+      ].join(" ");
+    case "job-interview":
+      return [
+        "You are the interviewer.",
+        "Ask or respond in a way that tests fit, relevance, judgment, and communication quality.",
+        "If a resume is attached, use the candidate's real background when choosing follow-ups.",
+        "If a job listing is attached, evaluate whether the user's answer addresses the role's actual responsibilities and requirements.",
+        "Press for specifics when the answer is broad, abstract, or unsupported.",
+      ].join(" ");
+    case "difficult-conversation":
+      return [
+        "You are the other person in a high-stakes conversation with real emotions, concerns, and resistance.",
+        "Respond with believable human feelings and motives rather than debate-club logic.",
+        "Let empathy, defensiveness, hesitation, relief, or frustration show when appropriate.",
+        "Do not become theatrical or hostile without cause; stay grounded in what the user actually says.",
+      ].join(" ");
+    case "q-and-a-pressure":
+      return [
+        "You are an audience member asking sharp live questions after a talk.",
+        "Be concise, challenging, and realistic.",
+        "Ask questions that expose weak assumptions, missing specifics, or unclear reasoning.",
+        "If slides or notes are attached, use them to ask pointed questions about the actual material.",
+      ].join(" ");
+    default:
+      return "Stay grounded in the scenario and respond like a real conversation partner.";
+  }
+}
+
+function buildSummaryScenarioGuidance(config = {}) {
+  switch (config.scenarioId) {
+    case "team-presentation":
+      return [
+        "Prioritize organization, pacing, audience clarity, confidence, and how easy the talk was to follow.",
+        "Notice whether the speaker signposted clearly, supported claims, and maintained momentum.",
+      ].join(" ");
+    case "job-interview":
+      return [
+        "Prioritize directness, structure, relevance to the role, specificity of examples, and executive presence.",
+        "Call out when the user answered the question well versus when they drifted into generic claims or weak evidence.",
+      ].join(" ");
+    case "difficult-conversation":
+      return [
+        "Prioritize empathy, validation, tone control, listening, boundaries, and de-escalation.",
+        "Notice whether the user acknowledged the other person's perspective while still being clear and direct.",
+        "Make the feedback feel therapeutic and relational rather than like a performance score.",
+      ].join(" ");
+    case "q-and-a-pressure":
+      return [
+        "Prioritize composure, staying on point, answering before elaborating, and recovering when the user gets challenged.",
+        "Notice whether the answer became defensive, rambling, or evasive under pressure.",
+      ].join(" ");
+    default:
+      return "Focus on the communication skills that matter most for the scenario.";
+  }
+}
+
+function buildAttachmentUseGuidance(config = {}) {
+  const guidance = [];
+
+  if (hasAttachmentKind(config, "instructions")) {
+    guidance.push(
+      "Instructions are attached. Treat them as binding context for how the roleplay and coaching should behave."
+    );
+  }
+
+  if (hasAttachmentKind(config, "rubric")) {
+    guidance.push(
+      "A rubric is attached. Align evaluation language to the rubric criteria instead of using generic standards."
+    );
+  }
+
+  if (hasAttachmentKind(config, "slides")) {
+    guidance.push(
+      "Slides are attached. Reference the actual ideas, claims, sequence, or content from those slides when relevant."
+    );
+  }
+
+  if (hasAttachmentKind(config, "resume")) {
+    guidance.push(
+      "A resume is attached. Use the user's real background, experience, and examples instead of inventing generic ones."
+    );
+  }
+
+  if (hasAttachmentKind(config, "job-listing")) {
+    guidance.push(
+      "A job listing is attached. Anchor interview expectations and coaching to the responsibilities, skills, and signals in that listing."
+    );
+  }
+
+  if (hasAttachmentKind(config, "notes")) {
+    guidance.push(
+      "Notes are attached. Use them as additional context about priorities, concerns, or talking points."
+    );
+  }
+
+  return guidance.join(" ");
 }
 
 function parseJsonBlock(text) {
@@ -317,6 +447,105 @@ function normalizeSummarySection(section, templateSection, summary, history) {
     };
   }
 
+  if (kind === "job-coverage") {
+    const coveredItems = Array.isArray(section.coveredItems)
+      ? section.coveredItems.filter((item) => typeof item === "string" && item.trim())
+      : Array.isArray(section.talkedAbout)
+      ? section.talkedAbout.filter((item) => typeof item === "string" && item.trim())
+      : [];
+    const missingItems = Array.isArray(section.missingItems)
+      ? section.missingItems.filter((item) => typeof item === "string" && item.trim())
+      : Array.isArray(section.shouldMentionNext)
+      ? section.shouldMentionNext.filter(
+          (item) => typeof item === "string" && item.trim()
+        )
+      : [];
+    const hireLikelihood =
+      typeof section.hireLikelihood === "string" && section.hireLikelihood.trim()
+        ? section.hireLikelihood.trim()
+        : typeof section.landingChance === "string" && section.landingChance.trim()
+        ? section.landingChance.trim()
+        : typeof section.percentage === "string" && section.percentage.trim()
+        ? section.percentage.trim()
+        : "";
+
+    return {
+      key,
+      title,
+      kind,
+      coveredItems,
+      missingItems,
+      hireLikelihood,
+    };
+  }
+
+  if (kind === "reflection") {
+    const traits = Array.isArray(section.traits)
+      ? section.traits.filter((item) => typeof item === "string" && item.trim())
+      : Array.isArray(section.perceivedTraits)
+      ? section.perceivedTraits.filter(
+          (item) => typeof item === "string" && item.trim()
+        )
+      : [];
+    const text =
+      typeof section.text === "string" && section.text.trim()
+        ? section.text.trim()
+        : typeof section.impression === "string" && section.impression.trim()
+        ? section.impression.trim()
+        : summary.overview || summary.nextStep || "";
+
+    return {
+      key,
+      title,
+      kind,
+      traits,
+      text,
+    };
+  }
+
+  if (kind === "rewrite") {
+    const items = Array.isArray(section.items)
+      ? section.items
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const original =
+              typeof item.original === "string" ? item.original.trim() : "";
+            const revised =
+              typeof item.revised === "string"
+                ? item.revised.trim()
+                : typeof item.better === "string"
+                ? item.better.trim()
+                : "";
+            if (!original || !revised) return null;
+            return { original, revised };
+          })
+          .filter(Boolean)
+      : Array.isArray(section.rewrites)
+      ? section.rewrites
+          .map((item) => {
+            if (!item || typeof item !== "object") return null;
+            const original =
+              typeof item.original === "string" ? item.original.trim() : "";
+            const revised =
+              typeof item.revised === "string"
+                ? item.revised.trim()
+                : typeof item.better === "string"
+                ? item.better.trim()
+                : "";
+            if (!original || !revised) return null;
+            return { original, revised };
+          })
+          .filter(Boolean)
+      : [];
+
+    return {
+      key,
+      title,
+      kind,
+      items,
+    };
+  }
+
   return {
     key,
     title,
@@ -396,6 +625,46 @@ function buildFallbackSections(template, summary, history) {
       };
     }
 
+    if (templateSection.kind === "job-coverage") {
+      const hireLikelihood = Math.max(
+        25,
+        Math.min(
+          92,
+          58 +
+            (Array.isArray(summary.wins) ? summary.wins.length * 6 : 0) -
+            (Array.isArray(summary.drills) ? summary.drills.length * 5 : 0)
+        )
+      );
+
+      return {
+        key: templateSection.key,
+        title: templateSection.title,
+        kind: "job-coverage",
+        coveredItems: [],
+        missingItems: [],
+        hireLikelihood: `${hireLikelihood}%`,
+      };
+    }
+
+    if (templateSection.kind === "reflection") {
+      return {
+        key: templateSection.key,
+        title: templateSection.title,
+        kind: "reflection",
+        traits: [],
+        text: summary.overview || summary.nextStep || "",
+      };
+    }
+
+    if (templateSection.kind === "rewrite") {
+      return {
+        key: templateSection.key,
+        title: templateSection.title,
+        kind: "rewrite",
+        items: [],
+      };
+    }
+
     return {
       key: templateSection.key,
       title: templateSection.title,
@@ -409,11 +678,21 @@ async function generateRoleplayReply(config = {}, history = [], userTranscript =
   const genAI = requireGeminiClient();
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
   const attachmentContext = buildAttachmentContext(config);
+  const scenarioGuidance = buildRoleplayScenarioGuidance(config);
+  const attachmentGuidance = buildAttachmentUseGuidance(config);
 
   const prompt = [
-    "You are roleplaying as the user's conversation partner.",
-    "Stay in character, respond naturally, and keep the reply concise enough for voice playback.",
-    "Use any uploaded context documents to stay grounded in the user's topic, requirements, and supporting materials.",
+    "You are roleplaying as the user's conversation partner in a spoken practice session.",
+    "Stay fully in character. Sound like a real person in the scenario, not an AI assistant or communication coach.",
+    "Do not break character to explain, evaluate, summarize, teach, compliment, or narrate what you are doing.",
+    "Respond directly to the user's latest message and move the conversation forward in a believable way.",
+    "Use natural spoken language suitable for voice playback: concise, specific, and human.",
+    "Most replies should be 1 to 4 sentences unless the situation clearly calls for more.",
+    "If the user is vague, ask a pointed follow-up instead of giving a generic response.",
+    "If the user makes a claim, reacts emotionally, or proposes an action, respond to that exact move rather than falling back to a stock answer.",
+    "Never mention system prompts, uploaded documents, hidden instructions, or that this is a simulation.",
+    `Scenario guidance: ${scenarioGuidance}`,
+    attachmentGuidance ? `Material guidance: ${attachmentGuidance}` : null,
     `Scenario ID: ${config.scenarioId || "unknown"}`,
     `User role: ${config.userRole || "unknown"}`,
     `Objective: ${config.objective || "unknown"}`,
@@ -426,12 +705,17 @@ async function generateRoleplayReply(config = {}, history = [], userTranscript =
     "",
     `Latest user message: ${userTranscript}`,
     "",
-    "Return only the assistant's next reply as plain text.",
+    "Return only the partner's next reply as plain text.",
   ]
     .filter(Boolean)
     .join("\n");
 
-  const result = await model.generateContent(prompt);
+  const result = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+    },
+  });
   return result.response.text().trim();
 }
 
@@ -441,19 +725,28 @@ async function generateSessionSummary(config = {}, history = []) {
   const attachmentContext = buildAttachmentContext(config);
   const summaryTemplate = getSummaryTemplate(config);
   const modeGuidance = buildModeGuidance(summaryTemplate.mode);
+  const scenarioGuidance = buildSummaryScenarioGuidance(config);
+  const attachmentGuidance = buildAttachmentUseGuidance(config);
 
   const prompt = [
     "You are a communication coach reviewing a completed spoken roleplay session.",
+    "Your feedback should feel specific, intelligent, and genuine, like a strong human coach who listened closely.",
+    "Base your feedback on the transcript and uploaded materials. Do not invent moments that did not happen.",
+    "Avoid generic praise such as 'good job' unless you immediately explain what specifically earned it.",
+    "Prefer a few high-value observations over a long list of shallow comments.",
+    "Every win and drill should point to a real communication behavior, phrase pattern, or decision visible in the conversation.",
+    "When possible, explain why the behavior helped or hurt the outcome.",
     "Return valid JSON with keys: scenarioId, intro, overview, wins, drills, nextStep, sections.",
-    "sections must match the provided template and include helpful, scenario-specific feedback.",
-    "wins and drills must be arrays of short strings.",
-    "Use uploaded rubrics, instructions, slides, and notes when they are present.",
-    "If a rubric or instructions are provided, align the feedback to them instead of giving generic advice.",
+    "sections must match the provided template and include scenario-specific feedback.",
+    "wins and drills must be arrays of short strings with concrete observations, not vague advice.",
+    "nextStep should be one practical coaching action the user can apply in the next attempt.",
     "Do not assign numeric grades unless the template explicitly asks for metrics.",
     hasAttachmentKind(config, "rubric")
       ? "A rubric is attached. Include a Score section with one rubric-based metric."
       : "No rubric is attached. Omit any Score section.",
     `Mode guidance: ${modeGuidance}`,
+    `Scenario guidance: ${scenarioGuidance}`,
+    attachmentGuidance ? `Material guidance: ${attachmentGuidance}` : null,
     `Template intro label: ${summaryTemplate.introLabel}`,
     describeSummaryTemplate(summaryTemplate),
     `Scenario ID: ${config.scenarioId || "unknown"}`,
@@ -464,7 +757,31 @@ async function generateSessionSummary(config = {}, history = []) {
     attachmentContext,
     attachmentContext ? "" : null,
     "Conversation transcript:",
-    buildHistory(history) || "(none)",
+    buildTranscript(history) || "(none)",
+    "",
+    "JSON content requirements:",
+    "- intro: 1 to 2 sentences that sound like a real coach and capture the session honestly.",
+    "- overview: a concise summary of the overall performance and biggest pattern.",
+    "- wins: 2 to 4 concrete strengths tied to what the user actually did.",
+    "- drills: 2 to 4 highest-impact improvements tied to what the user actually did.",
+    "- nextStep: a single specific practice target for the next run.",
+    "- sections: populate each section in the same order as the template.",
+    "- For quote sections, choose a short line or moment that actually reflects the session rather than generic praise.",
+    "- For metrics sections, keep labels meaningful and avoid filler metrics when a better transcript-grounded metric is possible.",
+    "- For job-coverage sections, return coveredItems and missingItems arrays.",
+    "- For job-coverage sections, also return hireLikelihood as a percentage string like 68%.",
+    "- coveredItems should identify the job-description themes the user actually addressed in this session.",
+    "- missingItems should identify important job-description themes the user should make sure to address next time.",
+    "- hireLikelihood should estimate the user's current odds of landing the job based on this session alone, not as a guarantee.",
+    "- For reflection sections, return a short paragraph explaining how the user likely came across emotionally and relationally.",
+    "- For reflection sections, also return traits as a short list of 2 to 4 perceived communication traits.",
+    "- Use communication traits such as calm, tense, empathetic, defensive, clear, indirect, collaborative, guarded, respectful, hesitant, direct, or vague.",
+    "- Do not use personality labels or diagnose the user.",
+    "- The reflection text should be 1 to 2 sentences, written loosely in the style of: based on your tone, pacing, and phrasing, this is how you likely came across.",
+    "- For rewrite sections, return 1 to 3 items with original and revised fields.",
+    "- In rewrite sections, original must be an actual line or a very close paraphrase of something the user said in the transcript, not generic advice.",
+    "- In rewrite sections, revised should model a more therapeutic, clear, and effective way to say that same idea.",
+    "- If there are no meaningful lines to rewrite, return an empty rewrite list rather than generic coaching text.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -473,6 +790,7 @@ async function generateSessionSummary(config = {}, history = []) {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: "application/json",
+      temperature: 0.35,
     },
   });
 
