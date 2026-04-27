@@ -86,7 +86,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveSession({
       id: buildId("session"),
       scenario,
-      config: normalizedConfig,
+      config: {
+        ...normalizedConfig,
+        summaryTemplate: scenario.summaryTemplate,
+      },
       turns: [],
       status: "ready",
       latestAssistantText: null,

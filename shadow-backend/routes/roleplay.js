@@ -208,10 +208,7 @@ router.post("/end", async (req, res) => {
       transcript: history
         .map((t) => `${t.role === "user" ? "You" : "Partner"}: ${t.text}`)
         .join("\n"),
-      overview: summary.overview || "",
-      wins: Array.isArray(summary.wins) ? summary.wins : [],
-      drills: Array.isArray(summary.drills) ? summary.drills : [],
-      nextStep: summary.nextStep || "",
+      ...summary,
     });
   } catch (error) {
     console.error("[END] error:", error);

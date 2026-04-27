@@ -14,6 +14,21 @@ export const SCENARIOS: ScenarioDefinition[] = [
       objective: "Deliver a clear, confident opening and keep steady pacing",
       partnerStyle: "Supportive but attentive audience",
     },
+    summaryTemplate: {
+      mode: "delivery",
+      introLabel: "Presentation recap",
+      sections: [
+        {
+          key: "score",
+          title: "Score",
+          kind: "metrics",
+          requiresAttachmentKind: "rubric",
+        },
+        { key: "strengths", title: "What landed well", kind: "bullets" },
+        { key: "focus", title: "What to sharpen", kind: "bullets" },
+        { key: "transcript", title: "Transcript", kind: "transcript" },
+      ],
+    },
   },
   {
     id: "job-interview",
@@ -27,6 +42,17 @@ export const SCENARIOS: ScenarioDefinition[] = [
       userRole: "Candidate",
       objective: "Answer clearly, use strong examples, and stay composed under pressure",
       partnerStyle: "Professional interviewer with follow-up questions",
+    },
+    summaryTemplate: {
+      mode: "objective",
+      introLabel: "Interview recap",
+      sections: [
+        { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
+        { key: "strengths", title: "What worked", kind: "bullets" },
+        { key: "metrics", title: "Interview signals", kind: "metrics" },
+        { key: "focus", title: "What to sharpen", kind: "bullets" },
+        { key: "transcript", title: "Transcript", kind: "transcript" },
+      ],
     },
   },
   {
@@ -42,6 +68,17 @@ export const SCENARIOS: ScenarioDefinition[] = [
       objective: "Stay calm, listen well, and communicate your point directly without escalating tension",
       partnerStyle: "Emotionally charged but open to honest dialogue",
     },
+    summaryTemplate: {
+      mode: "emotional",
+      introLabel: "Conversation recap",
+      sections: [
+        { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
+        { key: "quote", title: "Best moment", kind: "quote" },
+        { key: "strengths", title: "What went well", kind: "bullets" },
+        { key: "focus", title: "What to try next", kind: "bullets" },
+        { key: "transcript", title: "Transcript", kind: "transcript" },
+      ],
+    },
   },
   {
     id: "q-and-a-pressure",
@@ -55,6 +92,17 @@ export const SCENARIOS: ScenarioDefinition[] = [
       userRole: "Speaker",
       objective: "Respond calmly, think out loud clearly, and recover quickly from pressure",
       partnerStyle: "Curious but challenging questioner",
+    },
+    summaryTemplate: {
+      mode: "pressure",
+      introLabel: "Q&A recap",
+      sections: [
+        { key: "takeaway", title: "Top takeaway", kind: "takeaway" },
+        { key: "strengths", title: "What held up well", kind: "bullets" },
+        { key: "metrics", title: "Pressure signals", kind: "metrics" },
+        { key: "focus", title: "What to tighten up", kind: "bullets" },
+        { key: "transcript", title: "Transcript", kind: "transcript" },
+      ],
     },
   },
 ];

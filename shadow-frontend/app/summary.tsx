@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 
 import AppButton from "@/components/AppButton";
@@ -7,19 +7,13 @@ import BackButton from "@/components/BackButton";
 import Card from "@/components/Card";
 import PageHeader from "@/components/PageHeader";
 import Screen from "@/components/Screen";
-import SectionTitle from "@/components/SectionTitle";
-import { useSession, useTheme } from "@/context";
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function scoreLabel(score: number) {
-  if (score >= 85) return "Strong";
-  if (score >= 70) return "Good";
-  if (score >= 55) return "Building";
-  return "Needs work";
-}
+import {
+  useSession,
+  useTheme,
+  type SummaryMetric,
+  type SummarySection,
+  type SummarySectionSpec,
+} from "@/context";
 
 function excerpt(text: string, maxWords = 18) {
   const words = text.split(/\s+/).filter(Boolean);
@@ -27,94 +21,226 @@ function excerpt(text: string, maxWords = 18) {
   return `${words.slice(0, maxWords).join(" ")}...`;
 }
 
+function speakerLabel(role: "user" | "assistant") {
+  return role === "user" ? "You" : "Partner";
+}
+
+function snippet(text: string, maxWords = 12) {
+  return excerpt(text.replace(/\s+/g, " ").trim(), maxWords).replace(
+    /[.!?]+$/,
+    ""
+  );
+}
+
+function coachFragment(text: string, maxWords = 12) {
+  const cleaned = snippet(text, maxWords);
+  const lowered = cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
+
+  const verbMap: Array<[RegExp, string]> = [
+    [/^opened\b/i, "opening"],
+    [/^asked\b/i, "asking"],
+    [/^showed\b/i, "showing"],
+    [/^used\b/i, "using"],
+    [/^kept\b/i, "keeping"],
+    [/^stayed\b/i, "staying"],
+    [/^listened\b/i, "listening"],
+    [/^handled\b/i, "handling"],
+    [/^led\b/i, "leading"],
+    [/^responded\b/i, "responding"],
+  ];
+
+  for (const [pattern, replacement] of verbMap) {
+    if (pattern.test(lowered)) {
+      return lowered.replace(pattern, replacement);
+    }
+  }
+
+  return lowered;
+}
+
+function coachTakeaway(wins: string[]) {
+  const highlights = wins
+    .slice(0, 2)
+    .map((item) => coachFragment(item, 12))
+    .filter(Boolean);
+
+  if (highlights.length === 0) {
+    return "You handled the conversation well and stayed composed throughout.";
+  }
+
+  if (highlights.length === 1) {
+    return `You handled this well by ${highlights[0]}.`;
+  }
+
+  return `You handled this well by ${highlights[0]} and ${highlights[1]}.`;
+}
+
+function defaultSummarySections(
+  wins: string[],
+  drills: string[],
+  templateSections: SummarySectionSpec[],
+  attachments: { kind: string }[]
+): SummarySection[] {
+  if (!templateSections.length) {
+    return [
+      {
+        key: "takeaway",
+        kind: "takeaway",
+        title: "Top takeaway",
+        text: coachTakeaway(wins),
+      },
+      {
+        key: "strengths",
+        kind: "bullets",
+        title: "What went well",
+        items: wins,
+      },
+      {
+        key: "focus",
+        kind: "bullets",
+        title: "What to sharpen",
+        items: drills,
+      },
+      {
+        key: "transcript",
+        kind: "transcript",
+        title: "Transcript",
+        previewTurns: 3,
+      },
+    ];
+  }
+
+  return templateSections
+    .filter((section) => {
+      if (!section.requiresAttachmentKind) return true;
+      return hasAttachmentKind(attachments, section.requiresAttachmentKind);
+    })
+    .map((section) => {
+    if (section.kind === "takeaway") {
+      return {
+        key: section.key,
+        kind: "takeaway",
+        title: section.title,
+        text: coachTakeaway(wins),
+      };
+    }
+
+    if (section.kind === "bullets") {
+      return {
+        key: section.key,
+        kind: "bullets",
+        title: section.title,
+        items: section.key.toLowerCase().includes("focus") ? drills : wins,
+      };
+    }
+
+    if (section.kind === "metrics") {
+      const items: SummaryMetric[] = [
+        { key: `${section.key}-wins`, label: "Wins", value: String(wins.length), tone: "positive" },
+        { key: `${section.key}-drills`, label: "Focus items", value: String(drills.length), tone: "neutral" },
+      ];
+
+      return {
+        key: section.key,
+        kind: "metrics",
+        title: section.title,
+        items,
+      };
+    }
+
+    if (section.kind === "quote") {
+      return {
+        key: section.key,
+        kind: "quote",
+        title: section.title,
+        text: wins[0] ? coachFragment(wins[0], 16) : coachTakeaway(wins),
+        speaker: "you",
+      };
+    }
+
+    return {
+      key: section.key,
+      kind: "transcript",
+      title: section.title,
+      previewTurns: section.maxItems ?? 3,
+    };
+    });
+}
+
+function metricCardTone(tone?: SummaryMetric["tone"]) {
+  if (tone === "caution") return "#D28C3C";
+  if (tone === "neutral") return "#8F9AA7";
+  return "#25b8a6";
+}
+
+function hasAttachmentKind(
+  attachments: { kind: string }[],
+  kind: string
+) {
+  return attachments.some((attachment) => attachment.kind === kind);
+}
+
 export default function SummaryScreen() {
   const { colors } = useTheme();
-  const { activeSession, currentSummary, saveCurrentSummary, clearCurrentFlow } =
-    useSession();
+  const {
+    activeSession,
+    currentSummary,
+    saveCurrentSummary,
+    clearCurrentFlow,
+  } = useSession();
+  const [materialsExpanded, setMaterialsExpanded] = useState(false);
+  const [transcriptExpanded, setTranscriptExpanded] = useState(false);
 
   const analysis = useMemo(() => {
     const turns = activeSession?.turns ?? [];
     const transcript =
       currentSummary?.transcript ||
       turns
-        .map((turn) => `${turn.role === "user" ? "You" : "Partner"}: ${turn.text}`)
+        .map(
+          (turn) => `${turn.role === "user" ? "You" : "Partner"}: ${turn.text}`
+        )
         .join("\n") ||
       "";
-
-    const userTurns = turns.filter((turn) => turn.role === "user");
-    const assistantTurns = turns.filter((turn) => turn.role === "assistant");
-    const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-    const avgWordsPerTurn = turns.length ? wordCount / turns.length : 0;
-
-    const confidence = clamp(
-      Math.round(56 + userTurns.length * 7 + Math.min(18, avgWordsPerTurn * 1.2)),
-      42,
-      96
-    );
-    const clarity = clamp(
-      Math.round(
-        60 +
-          Math.max(0, 18 - Math.abs(avgWordsPerTurn - 18)) * 2 +
-          Math.min(12, assistantTurns.length * 2)
-      ),
-      40,
-      97
-    );
-    const concision = clamp(
-      Math.round(90 - Math.abs(avgWordsPerTurn - 22) * 2.4),
-      38,
-      95
-    );
-
-    const bestMomentSource =
-      [...assistantTurns].reverse().find((turn) => turn.text.trim().length > 0) ||
-      [...userTurns].reverse().find((turn) => turn.text.trim().length > 0) ||
-      turns[0] ||
-      null;
-
-    const coachNotes = [
-      currentSummary?.drills?.[0],
-      currentSummary?.drills?.[1],
-    ].filter(Boolean) as string[];
 
     return {
       transcript,
       turns,
-      userTurns,
-      assistantTurns,
-      confidence,
-      clarity,
-      concision,
-      avgWordsPerTurn,
-      bestMomentSource,
-      coachNotes,
     };
-  }, [activeSession?.turns, currentSummary?.drills, currentSummary?.transcript]);
+  }, [
+    activeSession?.turns,
+    currentSummary?.drills,
+    currentSummary?.transcript,
+  ]);
 
   if (!activeSession || !currentSummary) {
     router.replace("/");
     return null;
   }
 
-  const bestMomentText = analysis.bestMomentSource
-    ? `${analysis.bestMomentSource.role === "user" ? "You" : "Partner"}: ${excerpt(
-        analysis.bestMomentSource.text,
-        20
-      )}`
-    : currentSummary.overview;
-
-  const feedbackMetrics = [
-    { label: "Estimated confidence", value: analysis.confidence },
-    { label: "Estimated clarity", value: analysis.clarity },
-    { label: "Estimated concision", value: analysis.concision },
-  ];
+  const materials = activeSession.config.attachments ?? [];
+  const templateSections =
+    activeSession.scenario.summaryTemplate?.sections ?? [];
+  const summarySections =
+    currentSummary.sections?.length
+      ? currentSummary.sections.filter((section) => {
+          const spec = templateSections.find((item) => item.key === section.key);
+          if (!spec?.requiresAttachmentKind) return true;
+          return hasAttachmentKind(materials, spec.requiresAttachmentKind);
+        })
+      : defaultSummarySections(
+          currentSummary.wins,
+          currentSummary.drills,
+          templateSections,
+          materials
+        );
+  const recapText = currentSummary.intro || coachTakeaway(currentSummary.wins);
 
   return (
     <Screen backgroundColor={colors.bg} style={{ padding: 16, gap: 16 }}>
       <PageHeader title="Summary" left={<BackButton />} />
 
       <Card style={{ gap: 16 }}>
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           <Text
             style={{
               color: colors.muted,
@@ -124,241 +250,516 @@ export default function SummaryScreen() {
               textTransform: "uppercase",
             }}
           >
-            Session Review
+            Session Recap
           </Text>
-          <Text style={{ color: colors.fg, fontSize: 26, fontWeight: "900" }}>
-            {activeSession.scenario.title}
-          </Text>
-          <Text style={{ color: colors.muted, lineHeight: 22, fontSize: 15 }}>
-            {currentSummary.overview}
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: colors.fg, fontSize: 26, fontWeight: "900" }}>
+              {activeSession.scenario.title}
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 22, fontSize: 15 }}>
+              {recapText}
+            </Text>
+          </View>
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 18 }}>
+            {activeSession.config.userRole} •{" "}
+            {activeSession.config.partnerStyle}
+            {materials.length
+              ? ` • ${materials.length} material${
+                  materials.length === 1 ? "" : "s"
+                }`
+              : ""}
           </Text>
         </View>
 
-        <View style={{ gap: 10 }}>
-          <View style={{ gap: 4 }}>
-            <Text
-              style={{
-                color: colors.fg,
-                fontSize: 13,
-                fontWeight: "800",
-                letterSpacing: 0.4,
-              }}
-            >
-              Feedback snapshot
-            </Text>
-            <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 18 }}>
-              Quick estimates based on the turn pattern and transcript shape, not a final score.
-            </Text>
-          </View>
+        <View
+          style={{
+            height: 1,
+            backgroundColor: colors.border,
+            opacity: 0.8,
+          }}
+        />
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {feedbackMetrics.map((item) => (
-              <View key={item.label} style={{ flex: 1, gap: 8 }}>
-                <Card
-                  bg={colors.box}
-                  border={colors.border}
-                  style={{ gap: 8, padding: 12 }}
-                >
-                  <Text style={{ color: colors.muted, fontSize: 11, fontWeight: "800" }}>
-                    {item.label}
-                  </Text>
-                  <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "900" }}>
-                    {item.value}%
-                  </Text>
-                  <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "700" }}>
-                    {scoreLabel(item.value)}
-                  </Text>
-                </Card>
-                <View
+      </Card>
+
+      <View style={{ gap: 14 }}>
+        {summarySections.map((section) => {
+          if (section.kind === "takeaway") {
+            return (
+              <Card key={section.key} style={{ gap: 10 }}>
+                <Text
                   style={{
-                    height: 5,
-                    borderRadius: 999,
-                    backgroundColor: colors.border,
-                    overflow: "hidden",
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
                   }}
                 >
-                  <View
-                    style={{
-                      width: `${item.value}%`,
-                      height: "100%",
-                      borderRadius: 999,
-                      backgroundColor: colors.accent,
-                    }}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <Card bg={colors.box} border={colors.border} style={{ flex: 1, minWidth: 150, gap: 6 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "800" }}>
-              Turns
-            </Text>
-            <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "900" }}>
-              {analysis.turns.length}
-            </Text>
-          </Card>
-          <Card bg={colors.box} border={colors.border} style={{ flex: 1, minWidth: 150, gap: 6 }}>
-            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: "800" }}>
-              Avg. words / turn
-            </Text>
-            <Text style={{ color: colors.fg, fontSize: 22, fontWeight: "900" }}>
-              {analysis.avgWordsPerTurn ? analysis.avgWordsPerTurn.toFixed(1) : "0"}
-            </Text>
-          </Card>
-        </View>
-      </Card>
-
-      <Card style={{ gap: 10 }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontSize: 12,
-            fontWeight: "800",
-            letterSpacing: 0.8,
-            textTransform: "uppercase",
-          }}
-        >
-          Best Moment
-        </Text>
-        <Text style={{ color: colors.fg, fontSize: 18, fontWeight: "800", lineHeight: 26 }}>
-          {bestMomentText}
-        </Text>
-      </Card>
-
-      <Card style={{ gap: 12 }}>
-        <Text
-          style={{
-            color: colors.muted,
-            fontSize: 12,
-            fontWeight: "800",
-            letterSpacing: 0.8,
-            textTransform: "uppercase",
-          }}
-        >
-          Coach Notes
-        </Text>
-        <View style={{ gap: 10 }}>
-          {analysis.coachNotes.length ? (
-            analysis.coachNotes.map((note) => (
-              <Card key={note} bg={colors.box} border={colors.border} style={{ gap: 4 }}>
-                <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "800" }}>
-                  Coaching cue
+                  {section.title}
                 </Text>
-                <Text style={{ color: colors.fg, lineHeight: 21 }}>{note}</Text>
+                <Text style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}>
+                  {section.text}
+                </Text>
               </Card>
-            ))
-          ) : (
-            <Text style={{ color: colors.muted, lineHeight: 22 }}>
-              No drills generated yet.
-            </Text>
-          )}
-        </View>
-        <View
-          style={{
-            paddingTop: 12,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-          }}
-        >
-          <Text style={{ color: colors.muted, lineHeight: 22 }}>
-            Next step: {currentSummary.nextStep}
-          </Text>
-        </View>
-      </Card>
+            );
+          }
 
-      {activeSession.config.attachments?.length ? (
-        <Card style={{ gap: 12 }}>
-          <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
-            Materials
-          </SectionTitle>
-          {activeSession.config.attachments.map((attachment) => (
-            <Card
-              key={attachment.id}
-              bg={colors.box}
-              border={colors.border}
-              style={{ gap: 8 }}
-            >
-              <Text style={{ color: colors.fg, fontWeight: "800" }}>
-                {attachment.name}
-              </Text>
-              <Text style={{ color: colors.muted, fontSize: 12 }}>
-                {attachment.kind} | {attachment.mimeType}
-              </Text>
-              <Text style={{ color: colors.muted, lineHeight: 20 }}>
-                {attachment.promptText.slice(0, 180)}
-                {attachment.promptText.length > 180 ? "..." : ""}
-              </Text>
+          if (section.kind === "bullets") {
+            return (
+              <Card key={section.key} style={{ gap: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                {section.items.length ? (
+                  <View style={{ gap: 10 }}>
+                    {section.items.map((item) => (
+                      <Card
+                        key={item}
+                        bg={colors.box}
+                        border={colors.border}
+                        style={{ gap: 6, padding: 12 }}
+                      >
+                        <Text
+                          style={{
+                            color: colors.accent,
+                            fontSize: 11,
+                            fontWeight: "800",
+                          }}
+                        >
+                          Bullet
+                        </Text>
+                        <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                          {item}
+                        </Text>
+                      </Card>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                    No items available.
+                  </Text>
+                )}
+              </Card>
+            );
+          }
+
+          if (section.kind === "metrics") {
+            if (section.title.toLowerCase() === "score" && section.items.length === 1) {
+              const metric = section.items[0];
+              return (
+                <Card key={section.key} style={{ gap: 10 }}>
+                  <Text
+                    style={{
+                      color: colors.muted,
+                      fontSize: 12,
+                      fontWeight: "800",
+                      letterSpacing: 0.8,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {section.title}
+                  </Text>
+                  <Card
+                    bg={colors.box}
+                    border={colors.border}
+                    style={{ gap: 8, padding: 14 }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: 12,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {metric.label}
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.fg,
+                        fontSize: 32,
+                        fontWeight: "900",
+                      }}
+                    >
+                      {metric.value}
+                    </Text>
+                    {metric.tone ? (
+                      <Text
+                        style={{
+                          color: metricCardTone(metric.tone),
+                          fontSize: 12,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {metric.tone}
+                      </Text>
+                    ) : null}
+                  </Card>
+                </Card>
+              );
+            }
+
+            return (
+              <Card key={section.key} style={{ gap: 12 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {section.items.map((metric) => (
+                    <Card
+                      key={metric.key}
+                      bg={colors.box}
+                      border={colors.border}
+                      style={{ flex: 1, minWidth: 130, gap: 6, padding: 12 }}
+                    >
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontSize: 12,
+                          fontWeight: "800",
+                        }}
+                      >
+                        {metric.label}
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.fg,
+                          fontSize: 22,
+                          fontWeight: "900",
+                        }}
+                      >
+                        {metric.value}
+                      </Text>
+                      <Text
+                        style={{
+                          color: metricCardTone(metric.tone),
+                          fontSize: 12,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {metric.tone ?? "neutral"}
+                      </Text>
+                    </Card>
+                  ))}
+                </View>
+              </Card>
+            );
+          }
+
+          if (section.kind === "quote") {
+            return (
+              <Card key={section.key} style={{ gap: 10 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                <View
+                  style={{
+                    borderLeftWidth: 3,
+                    borderLeftColor: colors.accent,
+                    paddingLeft: 12,
+                    gap: 6,
+                  }}
+                >
+                  {section.speaker ? (
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: 11,
+                        fontWeight: "800",
+                      }}
+                    >
+                      {section.speaker === "you" ? "You" : "Partner"}
+                    </Text>
+                  ) : null}
+                  <Text style={{ color: colors.fg, lineHeight: 24, fontSize: 16 }}>
+                    {section.text}
+                  </Text>
+                </View>
+              </Card>
+            );
+          }
+
+          const transcriptPreviewCount = section.previewTurns ?? 3;
+          const previewTurns = analysis.turns.slice(0, transcriptPreviewCount);
+
+          return (
+            <Card key={section.key} style={{ gap: 12 }}>
+              <View style={{ gap: 8 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                    letterSpacing: 0.8,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {section.title}
+                </Text>
+                <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                  {transcriptExpanded
+                    ? "Full session transcript."
+                    : "Preview only. Expand to review the full conversation."}
+                </Text>
+              </View>
+
+              {transcriptExpanded ? (
+                <View style={{ gap: 10 }}>
+                  {analysis.turns.length ? (
+                    analysis.turns.map((turn) => {
+                      const isUser = turn.role === "user";
+                      return (
+                        <Card
+                          key={turn.id}
+                          bg={isUser ? colors.box : colors.card}
+                          border={colors.border}
+                          style={{
+                            gap: 8,
+                            padding: 12,
+                            alignSelf: isUser ? "flex-end" : "flex-start",
+                            maxWidth: "92%",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: colors.muted,
+                              fontSize: 11,
+                              fontWeight: "800",
+                            }}
+                          >
+                            {speakerLabel(turn.role)}
+                          </Text>
+                          <Text style={{ color: colors.fg, lineHeight: 22 }}>
+                            {turn.text}
+                          </Text>
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                      No transcript available.
+                    </Text>
+                  )}
+                  <Pressable onPress={() => setTranscriptExpanded(false)}>
+                    <Text style={{ color: colors.accent, fontWeight: "700" }}>
+                      Hide transcript
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable onPress={() => setTranscriptExpanded(true)}>
+                  <Card bg={colors.box} border={colors.border} style={{ gap: 10 }}>
+                    <Text
+                      style={{ color: colors.muted, fontSize: 12, fontWeight: "800" }}
+                    >
+                      Preview
+                    </Text>
+                    {previewTurns.length ? (
+                      <View style={{ gap: 10 }}>
+                        {previewTurns.map((turn) => (
+                          <View key={turn.id} style={{ gap: 4 }}>
+                            <Text
+                              style={{
+                                color: colors.fg,
+                                fontSize: 12,
+                                fontWeight: "800",
+                              }}
+                            >
+                              {speakerLabel(turn.role)}
+                            </Text>
+                            <Text style={{ color: colors.muted, lineHeight: 21 }}>
+                              {excerpt(turn.text, 16)}
+                            </Text>
+                          </View>
+                        ))}
+                        {analysis.turns.length > previewTurns.length ? (
+                          <Text
+                            style={{
+                              color: colors.accent,
+                              fontSize: 12,
+                              fontWeight: "700",
+                            }}
+                          >
+                            View full transcript
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : (
+                      <Text style={{ color: colors.muted, lineHeight: 22 }}>
+                        No transcript available.
+                      </Text>
+                    )}
+                  </Card>
+                </Pressable>
+              )}
             </Card>
-          ))}
+          );
+        })}
+      </View>
+
+      {materials.length ? (
+        <Card style={{ gap: 12 }}>
+          <View style={{ gap: 8 }}>
+            <Text
+              style={{
+                color: colors.muted,
+                fontSize: 12,
+                fontWeight: "800",
+                letterSpacing: 0.8,
+                textTransform: "uppercase",
+              }}
+            >
+              Materials
+            </Text>
+            <Text style={{ color: colors.muted, lineHeight: 20 }}>
+              {materialsExpanded
+                ? "Reference material used in the session."
+                : `${materials.length} material${
+                    materials.length === 1 ? "" : "s"
+                  } attached.`}
+            </Text>
+          </View>
+
+          {!materialsExpanded ? (
+            <Pressable onPress={() => setMaterialsExpanded(true)}>
+              <Card bg={colors.box} border={colors.border} style={{ gap: 8 }}>
+                <Text
+                  style={{
+                    color: colors.muted,
+                    fontSize: 12,
+                    fontWeight: "800",
+                  }}
+                >
+                  Preview
+                </Text>
+                <Text style={{ color: colors.fg, fontWeight: "800" }}>
+                  {materials[0].name}
+                </Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  {materials[0].kind} | {materials[0].mimeType}
+                </Text>
+                <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                  {materials[0].promptText.slice(0, 120)}
+                  {materials[0].promptText.length > 120 ? "..." : ""}
+                </Text>
+                {materials.length > 1 ? (
+                  <Text
+                    style={{
+                      color: colors.accent,
+                      fontSize: 12,
+                      fontWeight: "700",
+                    }}
+                  >
+                    View all materials
+                  </Text>
+                ) : null}
+              </Card>
+            </Pressable>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {materials.map((attachment) => (
+                <Card
+                  key={attachment.id}
+                  bg={colors.box}
+                  border={colors.border}
+                  style={{ gap: 8 }}
+                >
+                  <Text style={{ color: colors.fg, fontWeight: "800" }}>
+                    {attachment.name}
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: 12 }}>
+                    {attachment.kind} | {attachment.mimeType}
+                  </Text>
+                  <Text style={{ color: colors.muted, lineHeight: 20 }}>
+                    {attachment.promptText.slice(0, 180)}
+                    {attachment.promptText.length > 180 ? "..." : ""}
+                  </Text>
+                </Card>
+              ))}
+              <Pressable onPress={() => setMaterialsExpanded(false)}>
+                <Text style={{ color: colors.accent, fontWeight: "700" }}>
+                  Hide materials
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </Card>
       ) : null}
-
-      <Card style={{ gap: 14 }}>
-        <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
-          Wins
-        </SectionTitle>
-        {currentSummary.wins.map((item) => (
-          <Card key={item} bg={colors.box} border={colors.border} style={{ gap: 4 }}>
-            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "800" }}>
-              Win
-            </Text>
-            <Text style={{ color: colors.fg, lineHeight: 22 }}>{item}</Text>
-          </Card>
-        ))}
-      </Card>
-
-      <Card style={{ gap: 14 }}>
-        <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
-          Drills
-        </SectionTitle>
-        {currentSummary.drills.map((item) => (
-          <Card key={item} bg={colors.box} border={colors.border} style={{ gap: 4 }}>
-            <Text style={{ color: colors.accent, fontSize: 12, fontWeight: "800" }}>
-              Drill
-            </Text>
-            <Text style={{ color: colors.fg, lineHeight: 22 }}>{item}</Text>
-          </Card>
-        ))}
-      </Card>
-
-      <Card style={{ gap: 12 }}>
-        <SectionTitle color={colors.fg} style={{ textAlign: "left" }}>
-          Transcript
-        </SectionTitle>
-        <Text style={{ color: colors.fg, lineHeight: 22 }}>{analysis.transcript}</Text>
-      </Card>
 
       <View style={{ gap: 10 }}>
         <AppButton
           title="Save Session"
           color={colors.accent}
           fg={colors.onAccent}
+          style={{ paddingVertical: 14 }}
           onPress={async () => {
             try {
               const saved = await saveCurrentSummary();
               clearCurrentFlow();
               router.replace(`/history/${saved.id}` as any);
             } catch (error: any) {
-              Alert.alert("Save failed", error?.message ?? "Unable to save this session.");
+              Alert.alert(
+                "Save failed",
+                error?.message ?? "Unable to save this session."
+              );
             }
           }}
         />
         <Pressable
           onPress={() => {
-            clearCurrentFlow();
-            router.replace("/");
+            Alert.alert(
+              "Discard session?",
+              "This will clear the current summary and return you home.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Discard",
+                  style: "destructive",
+                  onPress: () => {
+                    clearCurrentFlow();
+                    router.replace("/");
+                  },
+                },
+              ]
+            );
           }}
         >
-          <Text style={{ color: colors.accent, textAlign: "center", fontWeight: "700" }}>
+          <Text
+            style={{
+              color: colors.muted,
+              textAlign: "center",
+              fontWeight: "700",
+            }}
+          >
             Discard and return home
           </Text>
         </Pressable>

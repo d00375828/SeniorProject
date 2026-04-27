@@ -107,6 +107,9 @@ function normalizeSummaryResponse(payload: any, turns: SessionTurn[]): SessionSu
       payload?.nextStep ??
       payload?.next_step ??
       "Run the scenario again and focus on calmer pacing, clearer structure, and stronger confidence.",
+    scenarioId: typeof payload?.scenarioId === "string" ? payload.scenarioId : undefined,
+    intro: typeof payload?.intro === "string" ? payload.intro : undefined,
+    sections: Array.isArray(payload?.sections) ? payload.sections : undefined,
   };
 }
 
