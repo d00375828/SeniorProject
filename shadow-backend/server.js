@@ -16,11 +16,15 @@ console.log(
 app.use(cors());
 app.use(express.json());
 
-app.use("/roleplay", roleplayRoutes);
+app.get("/health", (_req, res) => {
+  res.status(200).send("OK");
+});
 
 app.get("/", (_req, res) => {
   res.json({ message: "shadow-backend is running" });
 });
+
+app.use("/roleplay", roleplayRoutes);
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server listening on port ${PORT}`);
