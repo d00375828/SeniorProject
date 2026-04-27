@@ -371,6 +371,108 @@ function parseJsonBlock(text) {
   }
 }
 
+function extractAnsweredQuestions(history = []) {
+  const answeredQuestions = [];
+
+  for (let index = 0; index < history.length - 1; index += 1) {
+    const questionTurn = history[index];
+    const answerTurn = history[index + 1];
+
+    if (
+      questionTurn?.role !== "assistant" ||
+      answerTurn?.role !== "user" ||
+      typeof questionTurn.text !== "string" ||
+      typeof answerTurn.text !== "string"
+    ) {
+      continue;
+    }
+
+    const question = questionTurn.text.trim();
+    const answer = answerTurn.text.trim();
+
+    if (!question.includes("?") || !answer) {
+      continue;
+    }
+
+    answeredQuestions.push({ question, answer });
+  }
+
+  return answeredQuestions;
+}
+
+function estimateAnswerLevel(answer = "") {
+  const wordCount = answer.split(/\s+/).filter(Boolean).length;
+  const lower = answer.toLowerCase();
+  const hasSupport =
+    /\b(because|since|for example|for instance|evidence|reason|why|for me)\b/.test(
+      lower
+    );
+  const soundsUncertain =
+    /\b(i think|maybe|probably|not sure|i guess|kind of|sort of)\b/.test(lower);
+
+  if (wordCount >= 55 && hasSupport && !soundsUncertain) {
+    return "Expert";
+  }
+
+  if (wordCount >= 28 && hasSupport) {
+    return "Advanced";
+  }
+
+  if (wordCount >= 14) {
+    return soundsUncertain ? "Beginner" : "Intermediate";
+  }
+
+  return "Beginner";
+}
+
+function buildAnswerFeedback(answer = "", level = "Intermediate") {
+  const wordCount = answer.split(/\s+/).filter(Boolean).length;
+  const lower = answer.toLowerCase();
+  const hasSupport =
+    /\b(because|since|for example|for instance|evidence|reason|why|for me)\b/.test(
+      lower
+    );
+  const soundsUncertain =
+    /\b(i think|maybe|probably|not sure|i guess|kind of|sort of)\b/.test(lower);
+
+  if (level === "Expert") {
+    return "You answered directly, backed your point with reasoning, and sounded confident throughout.";
+  }
+
+  if (level === "Advanced") {
+    return "You answered clearly and gave real support for your point, though the explanation could still be a little sharper.";
+  }
+
+  if (level === "Intermediate") {
+    if (wordCount < 20) {
+      return "You addressed the question, but the answer needed a bit more detail or evidence to feel fully convincing.";
+    }
+
+    return "You responded to the question, but the point would land better with clearer support or a more specific example.";
+  }
+
+  if (soundsUncertain) {
+    return "You gave an initial answer, but it came across as tentative and needed clearer reasoning behind it.";
+  }
+
+  if (!hasSupport) {
+    return "You stated your view, but you did not give enough reasoning or evidence to make the answer feel strong.";
+  }
+
+  return "You started to answer the question, but the response stayed surface-level and needed more development.";
+}
+
+function buildQuestionReviewFallback(history = []) {
+  return extractAnsweredQuestions(history).map(({ question, answer }) => {
+    const level = estimateAnswerLevel(answer);
+    return {
+      question,
+      level,
+      feedback: buildAnswerFeedback(answer, level),
+    };
+  });
+}
+
 function normalizeSummarySection(section, templateSection, summary, history) {
   if (!section || typeof section !== "object") {
     section = {};
@@ -611,7 +713,7 @@ function normalizeSummarySection(section, templateSection, summary, history) {
       key,
       title,
       kind,
-      items,
+      items: items.length ? items : buildQuestionReviewFallback(history),
     };
   }
 
@@ -902,7 +1004,7 @@ async function generateSessionSummary(config = {}, history = []) {
     "- In rewrite sections, revised should model a more therapeutic, clear, and effective way to say that same idea.",
     "- Prefer rewriting moments where the user sounded hesitant, indirect, overly soft, defensive, abrupt, or emotionally unclear.",
     "- Only return an empty rewrite list if there truly are no meaningful lines or phrase patterns worth improving.",
-    "- For question-review sections, return one item for each meaningful question the AI asked.",
+    "- For question-review sections, return one item for each meaningful question the AI asked and the user actually answered.",
     "- For question-review items, include question, level, and feedback.",
     "- The level must be one of: Beginner, Intermediate, Advanced, Expert.",
     "- The level should reflect how well the user answered that question, not how hard the question was.",
