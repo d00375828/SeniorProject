@@ -1,3 +1,5 @@
+// Start to line 24 for the code demo
+
 const fs = require("fs");
 const textToSpeech = require("@google-cloud/text-to-speech");
 

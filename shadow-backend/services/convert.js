@@ -1,3 +1,5 @@
+// Use the whole file for the code demo
+
 const ffmpeg = require("fluent-ffmpeg");
 
 function convertM4aToWav(inputPath, outputPath) {

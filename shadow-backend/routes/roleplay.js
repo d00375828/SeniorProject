@@ -31,9 +31,14 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: (_req, file, cb) => {
-    const originalExtension = path.extname(file.originalname || "").toLowerCase();
+    const originalExtension = path
+      .extname(file.originalname || "")
+      .toLowerCase();
     const safeExtension = originalExtension || ".bin";
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExtension}`);
+    cb(
+      null,
+      `${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExtension}`
+    );
   },
 });
 const uploadAudio = multer({
@@ -81,7 +86,8 @@ router.post(
   handleContextUploadError,
   async (req, res) => {
     try {
-      const kind = typeof req.body.kind === "string" ? req.body.kind.trim() : "";
+      const kind =
+        typeof req.body.kind === "string" ? req.body.kind.trim() : "";
       if (!validateAttachmentKind(kind)) {
         return res.status(400).json({
           error:
@@ -107,7 +113,9 @@ router.post(
       );
 
       if (!extractedText || extractedText.length < 20) {
-        return res.status(400).json({ error: "No text could be extracted from that file." });
+        return res
+          .status(400)
+          .json({ error: "No text could be extracted from that file." });
       }
 
       const promptText = buildPromptText(extractedText, kind);
@@ -132,7 +140,7 @@ router.post(
     }
   }
 );
-
+// Start here for the code demo
 router.post(
   "/turn",
   (req, _res, next) => {
@@ -141,63 +149,65 @@ router.post(
   },
   uploadAudio.single("audio"),
   async (req, res) => {
-  let wavPath = null;
+    let wavPath = null;
 
-  try {
-    console.log("[TURN] upload complete");
-    const config = JSON.parse(req.body.config || "{}");
-    const history = JSON.parse(req.body.history || "[]");
+    try {
+      console.log("[TURN] upload complete");
+      const config = JSON.parse(req.body.config || "{}");
+      const history = JSON.parse(req.body.history || "[]");
 
-    if (!req.file?.path) {
-      return res.status(400).json({ error: "Missing audio upload." });
-    }
+      if (!req.file?.path) {
+        return res.status(400).json({ error: "Missing audio upload." });
+      }
 
-    const inputPath = req.file.path;
-    wavPath = path.join(uploadsDir, `${req.file.filename}.wav`);
+      const inputPath = req.file.path;
+      wavPath = path.join(uploadsDir, `${req.file.filename}.wav`);
 
-    console.log("[TURN] config:", config);
-    console.log("[TURN] history length:", history.length);
-    console.log("[TURN] uploaded file:", inputPath);
-    console.log("[TURN] upload metadata:", {
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-    });
+      console.log("[TURN] config:", config);
+      console.log("[TURN] history length:", history.length);
+      console.log("[TURN] uploaded file:", inputPath);
+      console.log("[TURN] upload metadata:", {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      });
 
-    await convertM4aToWav(inputPath, wavPath);
-    console.log("[TURN] wav created:", wavPath);
+      await convertM4aToWav(inputPath, wavPath);
+      console.log("[TURN] wav created:", wavPath);
 
-    const userTranscript = await speechToText(wavPath);
-    console.log("[TURN] transcript:", userTranscript);
+      const userTranscript = await speechToText(wavPath);
+      console.log("[TURN] transcript:", userTranscript);
 
-    const assistantText = await generateRoleplayReply(
-      config,
-      history,
-      userTranscript
-    );
-    console.log("[TURN] assistant text:", assistantText);
+      const assistantText = await generateRoleplayReply(
+        config,
+        history,
+        userTranscript
+      );
+      console.log("[TURN] assistant text:", assistantText);
 
-    const assistantAudioBase64 = await textToSpeechMp3(assistantText);
-    console.log("[TURN] tts complete");
+      const assistantAudioBase64 = await textToSpeechMp3(assistantText);
+      console.log("[TURN] tts complete");
 
-    res.json({
-      userTranscript,
-      assistantText,
-      assistantAudioBase64,
-      assistantAudioMimeType: "audio/mpeg",
-    });
-  } catch (error) {
-    console.error("[TURN] error:", error);
-    res.status(500).json({ error: "Turn processing failed." });
-  } finally {
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    if (wavPath && fs.existsSync(wavPath)) {
-      fs.unlinkSync(wavPath);
+      res.json({
+        userTranscript,
+        assistantText,
+        assistantAudioBase64,
+        assistantAudioMimeType: "audio/mpeg",
+      });
+      // End here for the code review
+    } catch (error) {
+      console.error("[TURN] error:", error);
+      res.status(500).json({ error: "Turn processing failed." });
+    } finally {
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      if (wavPath && fs.existsSync(wavPath)) {
+        fs.unlinkSync(wavPath);
+      }
     }
   }
-});
+);
 
 router.post("/end", async (req, res) => {
   try {

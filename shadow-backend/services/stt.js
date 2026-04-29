@@ -1,3 +1,5 @@
+// Everything but the exports for the code demo
+
 const fs = require("fs");
 const speech = require("@google-cloud/speech");
 
